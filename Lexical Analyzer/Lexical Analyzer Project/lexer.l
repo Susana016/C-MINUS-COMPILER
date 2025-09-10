@@ -6,73 +6,153 @@
 
 FILE *yyin;
 
+/* current position */
 int words = 0;
-int chars = 0;
-int lines = 1;
-int lexical_errors = 0;   // counter for errors
+int chars = 0;   /* number of characters consumed on current line */
+int lines = 1;   /* current line number (1-based) */
+int lexical_errors = 0;
 
+/* helper: advance position counters */
+void advance_pos(const char *s, int len) {
+    for (int i = 0; i < len; ++i) {
+        if (s[i] == '\n') {
+            lines++;
+            chars = 0;
+        } else {
+            chars++;
+        }
+    }
+}
 %}
 
 letter        [a-zA-Z]
 digit         [0-9]
 ID            {letter}({letter}|{digit})*
 delim         [ \t\n]
-Number        {digit}+(\.{digit}+)?(E[+\-]?{digit}+)? 
+Number        {digit}+(\.{digit}+)?(E[+\-]?{digit}+)?
 Keyword       (read|write|writeln|return|break|if|else|while)
 Type          (int|char|bool|string|void|float)
-String        \"([^\\\"]|\\.)*\" 
+String        \"([^\\\"]|\\.)*\"
 BinOp         (\+|\-|\*|\/|==|!=|<=|<|>=|>|&&|\|\|)
 ws            {delim}+
 
 %%
 
-"/*" {
-        int c;
-        while((c = input()) != 0) {
-            if(c == '*') {
-                if((c = input()) == '/')
-                    break;
-                else
-                    unput(c);
+"/*"    {
+            int start_line = lines;
+            int start_col  = chars + 1;
+            advance_pos(yytext, yyleng); /* count "/*" */
+
+            int c;
+            /* read until closing star-slash or EOF */
+            while ((c = input()) != EOF) {
+                if (c == '\n') { lines++; chars = 0; }
+                else { chars++; }
+
+                if (c == '*') {
+                    int d = input();
+                    if (d == EOF) break;
+                    if (d == '/') {
+                        chars++;
+                        break; /* end of comment */
+                    } else {
+                        unput(d);
+                    }
+                }
+            }
+
+            if (c == EOF) {
+                fprintf(stderr, "LEXICAL ERROR: unterminated comment starting at line %d, column %d\n",
+                        start_line, start_col);
+                exit(1);
             }
         }
-     }
 
-{Keyword}   { printf("%s : KEYWORD\n", yytext); /* return KEYWORD; */ }
-{Type}      { printf("%s : TYPE\n", yytext);   /* return TYPE; */ }
+{Keyword}   { int sl = lines, sc = chars + 1;
+              advance_pos(yytext, yyleng);
+              printf("%s : KEYWORD (line %d,col %d)\n", yytext, sl, sc);
+              /* return KEYWORD; */ }
 
-{BinOp}     { printf("%s : BINOP\n", yytext); /* return BINOP; */ }
-"="         { chars++; printf("%s : EQ\n", yytext); /* return EQ; */ }
+{Type}      { int sl = lines, sc = chars + 1;
+              advance_pos(yytext, yyleng);
+              printf("%s : TYPE (line %d,col %d)\n", yytext, sl, sc);
+              /* return TYPE; */ }
 
-{ID}        { words++; chars += strlen(yytext);
-              printf("%s : IDENTIFIER\n", yytext);
-              /* return IDENTIFIER; */
-            }
+{BinOp}     { int sl = lines, sc = chars + 1;
+              advance_pos(yytext, yyleng);
+              printf("%s : BINOP (line %d,col %d)\n", yytext, sl, sc);
+              /* return BINOP; */ }
 
-{Number}    { words++; chars += strlen(yytext);
-              printf("%s : NUMBER\n", yytext);
-              /* return NUMBER; */
-            }
+"="         { int sl = lines, sc = chars + 1;
+              advance_pos(yytext, yyleng);
+              printf("%s : EQ (line %d,col %d)\n", yytext, sl, sc);
+              /* return EQ; */ }
 
-{String}    { printf("%s : STRING\n", yytext); /* return STRING; */ }
+{ID}        { int sl = lines, sc = chars + 1;
+              words++;
+              advance_pos(yytext, yyleng);
+              printf("%s : IDENTIFIER (line %d,col %d)\n", yytext, sl, sc);
+              /* return IDENTIFIER; */ }
 
-";"         { chars++; printf("%s : SEMICOLON\n", yytext); /* return SEMICOLON; */ }
-","         { chars++; printf("%s : COMMA\n", yytext);     /* return COMMA; */ }
-"("         { chars++; printf("%s : LPAREN\n", yytext);    /* return LPAREN; */ }
-")"         { chars++; printf("%s : RPAREN\n", yytext);    /* return RPAREN; */ }
-"{"         { chars++; printf("%s : LBRACE\n", yytext);    /* return LBRACE; */ }
-"}"         { chars++; printf("%s : RBRACE\n", yytext);    /* return RBRACE; */ }
-"["         { chars++; printf("%s : LBRACKET\n", yytext);  /* return LBRACKET; */ }
-"]"         { chars++; printf("%s : RBRACKET\n", yytext);  /* return RBRACKET; */ }
+{Number}    { int sl = lines, sc = chars + 1;
+              words++;
+              advance_pos(yytext, yyleng);
+              printf("%s : NUMBER (line %d,col %d)\n", yytext, sl, sc);
+              /* return NUMBER; */ }
+
+{String}    { int sl = lines, sc = chars + 1;
+              advance_pos(yytext, yyleng);
+              printf("%s : STRING (line %d,col %d)\n", yytext, sl, sc);
+              /* return STRING; */ }
+
+";"         { int sl = lines, sc = chars + 1;
+              advance_pos(yytext, yyleng);
+              printf("%s : SEMICOLON (line %d,col %d)\n", yytext, sl, sc);
+              /* return SEMICOLON; */ }
+
+","         { int sl = lines, sc = chars + 1;
+              advance_pos(yytext, yyleng);
+              printf("%s : COMMA (line %d,col %d)\n", yytext, sl, sc);
+              /* return COMMA; */ }
+
+"("         { int sl = lines, sc = chars + 1;
+              advance_pos(yytext, yyleng);
+              printf("%s : LPAREN (line %d,col %d)\n", yytext, sl, sc);
+              /* return LPAREN; */ }
+
+")"         { int sl = lines, sc = chars + 1;
+              advance_pos(yytext, yyleng);
+              printf("%s : RPAREN (line %d,col %d)\n", yytext, sl, sc);
+              /* return RPAREN; */ }
+
+"{"         { int sl = lines, sc = chars + 1;
+              advance_pos(yytext, yyleng);
+              printf("%s : LBRACE (line %d,col %d)\n", yytext, sl, sc);
+              /* return LBRACE; */ }
+
+"}"         { int sl = lines, sc = chars + 1;
+              advance_pos(yytext, yyleng);
+              printf("%s : RBRACE (line %d,col %d)\n", yytext, sl, sc);
+              /* return RBRACE; */ }
+
+"["         { int sl = lines, sc = chars + 1;
+              advance_pos(yytext, yyleng);
+              printf("%s : LBRACKET (line %d,col %d)\n", yytext, sl, sc);
+              /* return LBRACKET; */ }
+
+"]"         { int sl = lines, sc = chars + 1;
+              advance_pos(yytext, yyleng);
+              printf("%s : RBRACKET (line %d,col %d)\n", yytext, sl, sc);
+              /* return RBRACKET; */ }
 
 \n          { lines++; chars = 0; }
-{ws}        { chars += yyleng; }
+{ws}        { advance_pos(yytext, yyleng); }
 
-.           { 
-              lexical_errors++;
-              printf("LEXICAL ERROR: '%s' at line %d, column %d\n", yytext, lines, chars + 1); 
-              exit(1);  // stop immediately on error
-            }
+.           { int err_line = lines, err_col = chars + 1;
+              advance_pos(yytext, yyleng);
+              fprintf(stderr, "LEXICAL ERROR: '%s' at line %d, column %d\n",
+                      yytext, err_line, err_col);
+              exit(1); }
 
 %%
 
@@ -82,10 +162,9 @@ int main(int argc, char **argv) {
     if (argc > 1) {
         if (!(yyin = fopen(argv[1], "r"))) {
             perror(argv[1]);
-            return(1);
+            return 1;
         }
     }
-
     yylex();
 
     if (lexical_errors == 0) {
