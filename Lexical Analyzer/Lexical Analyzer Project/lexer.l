@@ -2,18 +2,14 @@
 %{
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 FILE *yyin;
 
 int words = 0;
 int chars = 0;
 int lines = 1;
-
-// Normally you would also have a tokens.h file with definitions like:
-// #define IDENTIFIER  258
-// #define NUMBER      259
-// etc.
-// For now, just showing where the return statements would go.
+int lexical_errors = 0;   // counter for errors
 
 %}
 
@@ -49,12 +45,12 @@ ws            {delim}+
 "="         { chars++; printf("%s : EQ\n", yytext); /* return EQ; */ }
 
 {ID}        { words++; chars += strlen(yytext);
-              printf("%s : IDENTIFIER\n",yytext);
+              printf("%s : IDENTIFIER\n", yytext);
               /* return IDENTIFIER; */
             }
 
 {Number}    { words++; chars += strlen(yytext);
-              printf("%s : NUMBER\n",yytext);
+              printf("%s : NUMBER\n", yytext);
               /* return NUMBER; */
             }
 
@@ -72,18 +68,29 @@ ws            {delim}+
 \n          { lines++; chars = 0; }
 {ws}        { chars += yyleng; }
 
-.           { printf("UNKNOWN: %s\n", yytext); /* return ERROR; */ }
+.           { 
+              lexical_errors++;
+              printf("LEXICAL ERROR: '%s' at line %d, column %d\n", yytext, lines, chars + 1); 
+              exit(1);  // stop immediately on error
+            }
 
 %%
 
 int main(int argc, char **argv) {
-    printf("Compiler started. \n\n");
+    printf("Compiler started.\n\n");
 
-    if (argc > 1){
-        if(!(yyin = fopen(argv[1], "r"))) {
+    if (argc > 1) {
+        if (!(yyin = fopen(argv[1], "r"))) {
             perror(argv[1]);
             return(1);
         }
     }
+
     yylex();
+
+    if (lexical_errors == 0) {
+        printf("\nLexical analysis completed successfully. Source code is correct.\n");
+    }
+
+    return 0;
 }
