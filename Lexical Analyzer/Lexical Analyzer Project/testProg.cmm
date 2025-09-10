@@ -16,6 +16,7 @@ void main() {
     c = add(a, b);
     write c;
     writeln;
+    y#z = 20;
     
     if (a < b) {
         read a;
