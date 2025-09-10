@@ -64,7 +64,7 @@ ws            {delim}+
             if (c == EOF) {
                 fprintf(stderr, "LEXICAL ERROR: unterminated comment starting at line %d, column %d\n",
                         start_line, start_col);
-                exit(1);
+                
             }
         }
 
@@ -152,7 +152,7 @@ ws            {delim}+
               advance_pos(yytext, yyleng);
               fprintf(stderr, "LEXICAL ERROR: '%s' at line %d, column %d\n",
                       yytext, err_line, err_col);
-              exit(1); }
+              }
 
 %%
 
