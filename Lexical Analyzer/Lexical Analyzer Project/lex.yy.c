@@ -508,15 +508,29 @@ char *yytext;
 #line 3 "lexer.l"
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 FILE *yyin;
 
+/* current position */
 int words = 0;
-int chars = 0;
-int lines = 1;
+int chars = 0;   /* number of characters consumed on current line */
+int lines = 1;   /* current line number (1-based) */
+int lexical_errors = 0;
 
-#line 518 "lex.yy.c"
-#line 519 "lex.yy.c"
+/* helper: advance position counters */
+void advance_pos(const char *s, int len) {
+    for (int i = 0; i < len; ++i) {
+        if (s[i] == '\n') {
+            lines++;
+            chars = 0;
+        } else {
+            chars++;
+        }
+    }
+}
+#line 532 "lex.yy.c"
+#line 533 "lex.yy.c"
 
 #define INITIAL 0
 
@@ -733,10 +747,10 @@ YY_DECL
 		}
 
 	{
-#line 25 "lexer.l"
+#line 39 "lexer.l"
 
 
-#line 739 "lex.yy.c"
+#line 753 "lex.yy.c"
 
 	while ( /*CONSTCOND*/1 )		/* loops until end-of-file is reached */
 		{
@@ -795,124 +809,187 @@ do_action:	/* This label is used only to access EOF actions. */
 
 case 1:
 YY_RULE_SETUP
-#line 27 "lexer.l"
+#line 41 "lexer.l"
 {
-							int c;
-							while((c = input()) != 0) {
-								if(c == '*') {
-									if((c = input()) == '/')
-										break;
-									else
-										unput(c);
-								}
-							}
-						}
+            int start_line = lines;
+            int start_col  = chars + 1;
+            advance_pos(yytext, yyleng); /* count "/*" */
+
+            int c;
+            /* read until closing star-slash or EOF */
+            while ((c = input()) != EOF) {
+                if (c == '\n') { lines++; chars = 0; }
+                else { chars++; }
+
+                if (c == '*') {
+                    int d = input();
+                    if (d == EOF) break;
+                    if (d == '/') {
+                        chars++;
+                        break; /* end of comment */
+                    } else {
+                        unput(d);
+                    }
+                }
+            }
+
+            if (c == EOF) {
+                fprintf(stderr, "LEXICAL ERROR: unterminated comment starting at line %d, column %d\n",
+                        start_line, start_col);
+                
+            }
+        }
 	YY_BREAK
 case 2:
 YY_RULE_SETUP
-#line 40 "lexer.l"
-{ printf("%s : KEYWORD\n", yytext); }
+#line 71 "lexer.l"
+{ int sl = lines, sc = chars + 1;
+              advance_pos(yytext, yyleng);
+              printf("%s : KEYWORD (line %d,col %d)\n", yytext, sl, sc);
+              /* return KEYWORD; */ }
 	YY_BREAK
 case 3:
 YY_RULE_SETUP
-#line 41 "lexer.l"
-{ printf("%s : TYPE\n", yytext); }
+#line 76 "lexer.l"
+{ int sl = lines, sc = chars + 1;
+              advance_pos(yytext, yyleng);
+              printf("%s : TYPE (line %d,col %d)\n", yytext, sl, sc);
+              /* return TYPE; */ }
 	YY_BREAK
 case 4:
 YY_RULE_SETUP
-#line 43 "lexer.l"
-{ printf("%s : BINOP\n", yytext); }
+#line 81 "lexer.l"
+{ int sl = lines, sc = chars + 1;
+              advance_pos(yytext, yyleng);
+              printf("%s : BINOP (line %d,col %d)\n", yytext, sl, sc);
+              /* return BINOP; */ }
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
-#line 44 "lexer.l"
-{chars++;
-              printf("%s : EQ\n", yytext);
-             }
+#line 86 "lexer.l"
+{ int sl = lines, sc = chars + 1;
+              advance_pos(yytext, yyleng);
+              printf("%s : EQ (line %d,col %d)\n", yytext, sl, sc);
+              /* return EQ; */ }
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
-#line 49 "lexer.l"
-{words++; chars += strlen(yytext);
-              printf("%s : IDENTIFIER\n",yytext);
-             }
+#line 91 "lexer.l"
+{ int sl = lines, sc = chars + 1;
+              words++;
+              advance_pos(yytext, yyleng);
+              printf("%s : IDENTIFIER (line %d,col %d)\n", yytext, sl, sc);
+              /* return IDENTIFIER; */ }
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
-#line 53 "lexer.l"
-{words++; chars += strlen(yytext);
-               printf("%s : NUMBER\n",yytext);
-             }
+#line 97 "lexer.l"
+{ int sl = lines, sc = chars + 1;
+              words++;
+              advance_pos(yytext, yyleng);
+              printf("%s : NUMBER (line %d,col %d)\n", yytext, sl, sc);
+              /* return NUMBER; */ }
 	YY_BREAK
 case 8:
 /* rule 8 can match eol */
 YY_RULE_SETUP
-#line 57 "lexer.l"
-{ printf("%s : STRING\n", yytext); }
+#line 103 "lexer.l"
+{ int sl = lines, sc = chars + 1;
+              advance_pos(yytext, yyleng);
+              printf("%s : STRING (line %d,col %d)\n", yytext, sl, sc);
+              /* return STRING; */ }
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
-#line 60 "lexer.l"
-{ chars++; printf("%s : SEMICOLON\n", yytext); }
+#line 108 "lexer.l"
+{ int sl = lines, sc = chars + 1;
+              advance_pos(yytext, yyleng);
+              printf("%s : SEMICOLON (line %d,col %d)\n", yytext, sl, sc);
+              /* return SEMICOLON; */ }
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
-#line 61 "lexer.l"
-{ chars++; printf("%s : COMMA\n", yytext); }
+#line 113 "lexer.l"
+{ int sl = lines, sc = chars + 1;
+              advance_pos(yytext, yyleng);
+              printf("%s : COMMA (line %d,col %d)\n", yytext, sl, sc);
+              /* return COMMA; */ }
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
-#line 62 "lexer.l"
-{ chars++; printf("%s : LPAREN\n", yytext); }
+#line 118 "lexer.l"
+{ int sl = lines, sc = chars + 1;
+              advance_pos(yytext, yyleng);
+              printf("%s : LPAREN (line %d,col %d)\n", yytext, sl, sc);
+              /* return LPAREN; */ }
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
-#line 63 "lexer.l"
-{ chars++; printf("%s : RPAREN\n", yytext); }
+#line 123 "lexer.l"
+{ int sl = lines, sc = chars + 1;
+              advance_pos(yytext, yyleng);
+              printf("%s : RPAREN (line %d,col %d)\n", yytext, sl, sc);
+              /* return RPAREN; */ }
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
-#line 64 "lexer.l"
-{ chars++; printf("%s : LBRACE\n", yytext); }
+#line 128 "lexer.l"
+{ int sl = lines, sc = chars + 1;
+              advance_pos(yytext, yyleng);
+              printf("%s : LBRACE (line %d,col %d)\n", yytext, sl, sc);
+              /* return LBRACE; */ }
 	YY_BREAK
 case 14:
 YY_RULE_SETUP
-#line 65 "lexer.l"
-{ chars++; printf("%s : RBRACE\n", yytext); }
+#line 133 "lexer.l"
+{ int sl = lines, sc = chars + 1;
+              advance_pos(yytext, yyleng);
+              printf("%s : RBRACE (line %d,col %d)\n", yytext, sl, sc);
+              /* return RBRACE; */ }
 	YY_BREAK
 case 15:
 YY_RULE_SETUP
-#line 66 "lexer.l"
-{ chars++; printf("%s : LBRACKET\n", yytext); }
+#line 138 "lexer.l"
+{ int sl = lines, sc = chars + 1;
+              advance_pos(yytext, yyleng);
+              printf("%s : LBRACKET (line %d,col %d)\n", yytext, sl, sc);
+              /* return LBRACKET; */ }
 	YY_BREAK
 case 16:
 YY_RULE_SETUP
-#line 67 "lexer.l"
-{ chars++; printf("%s : RBRACKET\n", yytext); }
+#line 143 "lexer.l"
+{ int sl = lines, sc = chars + 1;
+              advance_pos(yytext, yyleng);
+              printf("%s : RBRACKET (line %d,col %d)\n", yytext, sl, sc);
+              /* return RBRACKET; */ }
 	YY_BREAK
 case 17:
 /* rule 17 can match eol */
 YY_RULE_SETUP
-#line 70 "lexer.l"
+#line 148 "lexer.l"
 { lines++; chars = 0; }
 	YY_BREAK
 case 18:
 /* rule 18 can match eol */
 YY_RULE_SETUP
-#line 71 "lexer.l"
-{ chars += yyleng; }
+#line 149 "lexer.l"
+{ advance_pos(yytext, yyleng); }
 	YY_BREAK
 case 19:
 YY_RULE_SETUP
-#line 74 "lexer.l"
-{ printf("UNKNOWN: %s\n", yytext); }
+#line 151 "lexer.l"
+{ int err_line = lines, err_col = chars + 1;
+              advance_pos(yytext, yyleng);
+              fprintf(stderr, "LEXICAL ERROR: '%s' at line %d, column %d\n",
+                      yytext, err_line, err_col);
+              }
 	YY_BREAK
 case 20:
 YY_RULE_SETUP
-#line 76 "lexer.l"
+#line 157 "lexer.l"
 ECHO;
 	YY_BREAK
-#line 915 "lex.yy.c"
+#line 992 "lex.yy.c"
 case YY_STATE_EOF(INITIAL):
 	yyterminate();
 
@@ -1917,20 +1994,24 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 76 "lexer.l"
-
+#line 157 "lexer.l"
 
 
 int main(int argc, char **argv) {
-    printf("Compiler started. \n\n");
+    printf("Compiler started.\n\n");
 
-    if (argc > 1){
-        if(!(yyin = fopen(argv[1], "r")))
-            {
-        perror(argv[1]);
-        return(1);
+    if (argc > 1) {
+        if (!(yyin = fopen(argv[1], "r"))) {
+            perror(argv[1]);
+            return 1;
         }
     }
     yylex();
+
+    if (lexical_errors == 0) {
+        printf("\nLexical analysis completed successfully. Source code is correct.\n");
+    }
+
+    return 0;
 }
 
