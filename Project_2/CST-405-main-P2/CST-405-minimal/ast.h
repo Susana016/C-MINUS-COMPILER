@@ -20,8 +20,9 @@ typedef enum {
     NODE_ARRAY_ACCESS, /* Array element access (e.g., a[2]) */
     NODE_ARRAY_ASSIGN, /* Array element assignment (e.g., a[2] = 5) */
     NODE_STMT_LIST,  /* List of statements (program structure) */
-    NODE_RETURN,    /* Return statement (e.g., return x) */
-    NODE_MAIN_FUNC  /* Main function (program entry point) */
+    NODE_ARRAY_2D_DECL,      // 2D array declaration
+    NODE_ARRAY_2D_ASSIGN,    // 2D array assignment
+    NODE_ARRAY_2D_ACCESS     // 2D array access
 } NodeType;
 
 /* AST NODE STRUCTURE
@@ -88,6 +89,25 @@ typedef struct ASTNode {
         struct {
             struct ASTNode* expr;      /* Expression to print */
         } print;  
+        /* 2D array structure s*/
+        struct {
+            char* name;                /* 2D Array name */
+            int rows;                  /* Number of rows */
+            int cols;                  /* Number of columns */      
+        } array_2d_decl;
+
+        struct {
+            char* name;
+            struct ASTNode* row;
+            struct ASTNode* col;
+            struct ASTNode* value;
+        } array_2d_assign;
+
+        struct {
+            char* name;
+            struct ASTNode* row;
+            struct ASTNode* col;
+        } array_2d_access;
         
     } data;
 } ASTNode;
@@ -105,6 +125,9 @@ ASTNode* createStmtList(ASTNode* stmt1, ASTNode* stmt2);        /* Create statem
 ASTNode* createArrayDecl(char* name, int size);                /* Create array declaration node */
 ASTNode* createArrayAccess(char* name, ASTNode* index);        /* Create array access node */
 ASTNode* createArrayAssign(char* name, ASTNode* index, ASTNode* value); /* Create array assign node */
+ASTNode* createArray2DDecl(char* name, int rows, int cols);
+ASTNode* createArray2DAssign(char* name, ASTNode* row, ASTNode* col, ASTNode* value);
+ASTNode* createArray2DAccess(char* name, ASTNode* row, ASTNode* col);
 
 
 /* AST DISPLAY FUNCTION */

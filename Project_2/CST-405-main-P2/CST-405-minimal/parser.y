@@ -78,17 +78,22 @@ decl:
         $$ = createDecl($2);  /* $2 is the ID token's string value */
         free($2);             /* Free the string copy from scanner */
     }
-    | INT ID '=' expr ';' {   /* ADD THIS */
+    | INT ID '=' expr ';' {
         /* Declaration with initialization: int x = 5; */
         ASTNode* decl = createDecl($2);
         ASTNode* assign = createAssign($2, $4);
         $$ = createStmtList(decl, assign);
         free($2);
     }
-        | INT ID LBRACKET NUM RBRACKET ';' { 
-        /* Array declaration (e.g., int arr[10];) */
+    | INT ID LBRACKET NUM RBRACKET ';' { 
+        /* 1D Array declaration (e.g., int arr[10];) */
         $$ = createArrayDecl($2, $4);  /* $2 = ID, $4 = NUM size */
         free($2);                      /* Free the identifier string */
+    }
+    | INT ID LBRACKET NUM RBRACKET LBRACKET NUM RBRACKET ';' { 
+        /* 2D Array declaration (e.g., int matrix[3][4];) */
+        $$ = createArray2DDecl($2, $4, $7);  /* $2=ID, $4=rows, $7=cols */
+        free($2);                            /* Free the identifier string */
     }
     ;
 
@@ -99,10 +104,15 @@ assign:
         $$ = createAssign($1, $3);  /* $1 = ID, $3 = expr */
         free($1);                   /* Free the identifier string */
     }
-        | ID LBRACKET expr RBRACKET '=' expr ';' { 
-        /* Array element assignment (e.g., arr[2] = expr;) */
+    | ID LBRACKET expr RBRACKET '=' expr ';' { 
+        /* 1D Array element assignment (e.g., arr[2] = expr;) */
         $$ = createArrayAssign($1, $3, $6);  /* $1=ID, $3=index expr, $6=value expr */
         free($1);                            /* Free the identifier string */
+    }
+    | ID LBRACKET expr RBRACKET LBRACKET expr RBRACKET '=' expr ';' { 
+        /* 2D Array element assignment (e.g., matrix[1][2] = expr;) */
+        $$ = createArray2DAssign($1, $3, $6, $9);  /* $1=ID, $3=row, $6=col, $9=value */
+        free($1);                                  /* Free the identifier string */
     }
     ;
 
@@ -122,9 +132,14 @@ expr:
         $$ = createBinOp('+', $1, $3);  /* Left child, op, right child */
     }
     | ID LBRACKET expr RBRACKET { 
-        /* Array element access (e.g., arr[2]) */
+        /* 1D Array element access (e.g., arr[2]) */
         $$ = createArrayAccess($1, $3);  /* $1=ID, $3=index expr */
         free($1);                        /* Free the identifier string */
+    }
+    | ID LBRACKET expr RBRACKET LBRACKET expr RBRACKET { 
+        /* 2D Array element access (e.g., matrix[1][2]) */
+        $$ = createArray2DAccess($1, $3, $6);  /* $1=ID, $3=row, $6=col */
+        free($1);                              /* Free the identifier string */
     }
     ;
 

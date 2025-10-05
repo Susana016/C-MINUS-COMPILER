@@ -95,6 +95,34 @@ ASTNode* createStmtList(ASTNode* stmt1, ASTNode* stmt2) {
     return node;
 }
 
+ASTNode* createArray2DDecl(char* name, int rows, int cols) {
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_ARRAY_2D_DECL;
+    node->data.array_2d_decl.name = strdup(name);
+    node->data.array_2d_decl.rows = rows;
+    node->data.array_2d_decl.cols = cols;
+    return node;
+}
+
+ASTNode* createArray2DAssign(char* name, ASTNode* row, ASTNode* col, ASTNode* value) {
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_ARRAY_2D_ASSIGN;
+    node->data.array_2d_assign.name = strdup(name);
+    node->data.array_2d_assign.row = row;
+    node->data.array_2d_assign.col = col;
+    node->data.array_2d_assign.value = value;
+    return node;
+}
+
+ASTNode* createArray2DAccess(char* name, ASTNode* row, ASTNode* col) {
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_ARRAY_2D_ACCESS;
+    node->data.array_2d_access.name = strdup(name);
+    node->data.array_2d_access.row = row;
+    node->data.array_2d_access.col = col;
+    return node;
+}
+
 /* Display the AST structure (for debugging and education) */
 void printAST(ASTNode* node, int level) {
     if (!node) return;
@@ -146,6 +174,23 @@ void printAST(ASTNode* node, int level) {
             /* Print statements in sequence at same level */
             printAST(node->data.stmtlist.stmt, level);
             printAST(node->data.stmtlist.next, level);
+            break;
+        case NODE_ARRAY_2D_DECL:
+            printf("ARRAY_2D_DECL: %s[%d][%d]\n", 
+                   node->data.array_2d_decl.name, 
+                   node->data.array_2d_decl.rows, 
+                   node->data.array_2d_decl.cols);
+            break;
+        case NODE_ARRAY_2D_ASSIGN:
+            printf("ARRAY_2D_ASSIGN: %s\n", node->data.array_2d_assign.name);
+            printAST(node->data.array_2d_assign.row, level + 1);
+            printAST(node->data.array_2d_assign.col, level + 1);
+            printAST(node->data.array_2d_assign.value, level + 1);
+            break;
+        case NODE_ARRAY_2D_ACCESS:
+            printf("ARRAY_2D_ACCESS: %s\n", node->data.array_2d_access.name);
+            printAST(node->data.array_2d_access.row, level + 1);
+            printAST(node->data.array_2d_access.col, level + 1);
             break;
         default:
             printf("UNKNOWN NODE TYPE\n");      
