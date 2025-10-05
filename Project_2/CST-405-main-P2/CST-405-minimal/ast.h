@@ -9,14 +9,19 @@
 
 /* NODE TYPES - Different kinds of AST nodes in our language */
 typedef enum {
-    NODE_NUM,        /* Numeric literal (e.g., 42) */
-    NODE_VAR,        /* Variable reference (e.g., x) */
-    NODE_BINOP,      /* Binary operation (e.g., x + y) */
-    NODE_DECL,       /* Variable declaration (e.g., int x) */
-    NODE_ASSIGN,     /* Assignment statement (e.g., x = 10) */
-    NODE_PRINT,      /* Print statement (e.g., print(x)) */
+    NODE_NUM,       /* Numeric literal (e.g., 42) */
+    NODE_VAR,       /* Variable reference (e.g., x) */
+    NODE_BINOP,     /* Binary operation (e.g., x + y) */
+    NODE_DECL,      /* Variable declaration (e.g., int x) */
+    NODE_DECL_INIT, /* Variable declaration with initialization (e.g., int x = 5) */
+    NODE_ASSIGN,    /* Assignment statement (e.g., x = 10) */
+    NODE_PRINT,     /* Print statement (e.g., print(x)) */
+    NODE_ARRAY_DECL,/* Array declaration (e.g., int a[10]) */
+    NODE_ARRAY_ACCESS, /* Array element access (e.g., a[2]) */
+    NODE_ARRAY_ASSIGN, /* Array element assignment (e.g., a[2] = 5) */
     NODE_STMT_LIST,  /* List of statements (program structure) */
-    NODE_ARRAY_ACCESS   /* Array access (e.g., arr[0]) */
+    NODE_RETURN,    /* Return statement (e.g., return x) */
+    NODE_MAIN_FUNC  /* Main function (program entry point) */
 } NodeType;
 
 /* AST NODE STRUCTURE
@@ -46,6 +51,29 @@ typedef struct ASTNode {
             char* var;                  /* Variable being assigned to */
             struct ASTNode* value;      /* Expression being assigned */
         } assign;
+        /* Array declaration structure (NODE_ARRAY_DECL) */
+        struct {
+            char* name;                /* Array name */
+            int size;                  /* Array size */
+        } array_decl;
+
+        struct {
+            char* name;
+            struct ASTNode* value;
+        } decl_init;
+
+        /* Array access structure (NODE_ARRAY_ACCESS) */
+        struct {
+            char* name;                /* Array name */
+            struct ASTNode* index;     /* Index expression */
+        } array_access;
+
+        /* Array assignment structure (NODE_ARRAY_ASSIGN) */
+        struct {
+            char* name;                /* Array name */
+            struct ASTNode* index;     /* Index expression */
+            struct ASTNode* value;     /* Value expression */
+        } array_assign;
         
         /* Print expression (NODE_PRINT) */
         struct ASTNode* expr;
@@ -56,26 +84,11 @@ typedef struct ASTNode {
             struct ASTNode* next;       /* Rest of the list */
         } stmtlist;
 
-        /* -------- ADDITIONS PROJECT 2 (some features partially disabled) --------*/
-        /* If/If-Else structures are defined here so other compilation units
-           that reference `node->data.ifstmt` or `node->data.ifelsestmt`
-           can compile even when higher-level creation functions are
-           intentionally disabled. Implementations can remain commented
-           in `ast.c` until the feature is re-enabled. */
+        /* Return statement (NODE_PRINT) */
         struct {
-            struct ASTNode* condition;  /* Condition expression */
-            struct ASTNode* thenBlock;  /* Then-block statements */
-        } ifstmt;
-        struct {
-            struct ASTNode* condition;  /* Condition expression */
-            struct ASTNode* thenBlock;  /* Then-block statements */
-            struct ASTNode* elseBlock;  /* Else-block statements */
-        } ifelsestmt;
-
-        /* Array access structure (NODE_ARRAY_ACCESS) */
-        struct {
-            struct ASTNode* index;      /* Index expression */
-        } arrayaccess;
+            struct ASTNode* expr;      /* Expression to print */
+        } print;  
+        
     } data;
 } ASTNode;
 
@@ -89,11 +102,10 @@ ASTNode* createDecl(char* name);                                 /* Create decla
 ASTNode* createAssign(char* var, ASTNode* value);               /* Create assignment node */
 ASTNode* createPrint(ASTNode* expr);                            /* Create print node */
 ASTNode* createStmtList(ASTNode* stmt1, ASTNode* stmt2);        /* Create statement list */
+ASTNode* createArrayDecl(char* name, int size);                /* Create array declaration node */
+ASTNode* createArrayAccess(char* name, ASTNode* index);        /* Create array access node */
+ASTNode* createArrayAssign(char* name, ASTNode* index, ASTNode* value); /* Create array assign node */
 
-/* -------- ADDITIONS PROJECT 2 --------
-ASTNode* createIf(ASTNode* condition, ASTNode* thenBlock);       Create if statement node 
-ASTNode* createIfElse(ASTNode* condition, ASTNode* thenBlock, ASTNode* elseBlock);  Create if-else statement node */
-ASTNode* createArrayAccess(ASTNode* index);                    /* Create array access node */
 
 /* AST DISPLAY FUNCTION */
 void printAST(ASTNode* node, int level);                        /* Pretty-print the AST */

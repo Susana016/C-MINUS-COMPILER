@@ -27,6 +27,8 @@ int addVar(char* name) {
     /* Add new symbol entry */
     symtab.vars[symtab.count].name = strdup(name);
     symtab.vars[symtab.count].offset = symtab.nextOffset;
+    symtab.vars[symtab.count].size = 1;
+    symtab.vars[symtab.count].isArray = 0;
     
     /* Advance offset by 4 bytes (size of int in MIPS) */
     symtab.nextOffset += 4;
@@ -50,4 +52,21 @@ int getVarOffset(char* name) {
 /* Check if a variable has been declared */
 int isVarDeclared(char* name) {
     return getVarOffset(name) != -1;  /* True if found, false otherwise */
+}
+
+int addArray(char* name, int size) {
+    if (isVarDeclared(name)) {
+        return -1;  // Error: already exists
+    }
+
+    symtab.vars[symtab.count].name = strdup(name);
+    symtab.vars[symtab.count].offset = symtab.nextOffset;
+    symtab.vars[symtab.count].size = size;
+    symtab.vars[symtab.count].isArray = 1;
+
+    // Reserve size * 4 bytes on stack
+    symtab.nextOffset += size * 4;
+    symtab.count++;
+
+    return symtab.vars[symtab.count - 1].offset;
 }

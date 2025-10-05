@@ -1,14 +1,13 @@
-int a;
-int b;
-int sum;
+int x = 5;
+int y = x + 3;
 
-int array[10];
-a = 5;
-b = 7;
-sum = a + b;
-print(sum);
-a = sum + 10;
-print(a);
+int arr[3];
 
-b = a + sum;
-print(b);
+arr[0] = x;
+arr[1] = y;
+arr[2] = arr[0] + arr[1];
+
+int total;
+total = arr[0] + arr[1] + arr[2];
+
+print(total);

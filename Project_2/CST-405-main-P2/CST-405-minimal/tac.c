@@ -11,7 +11,6 @@ void initTAC() {
     tacList.head = NULL;
     tacList.tail = NULL;
     tacList.tempCount = 0;
-    tacList.labelCount = 0; /* -------- ADDITIONS PROJECT 2 --------*/
     optimizedList.head = NULL;
     optimizedList.tail = NULL;
 }
@@ -20,13 +19,6 @@ char* newTemp() {
     char* temp = malloc(10);
     sprintf(temp, "t%d", tacList.tempCount++);
     return temp;
-}
-
-/* -------- ADDITIONS PROJECT 2 --------*/
-char* newLabel() {
-    char* label = malloc(10);
-    sprintf(label, "L%d", tacList.labelCount++);
-    return label;
 }
 
 TACInstr* createTAC(TACOp op, char* arg1, char* arg2, char* result) {
@@ -81,6 +73,18 @@ char* generateTACExpr(ASTNode* node) {
             
             return temp;
         }
+        case NODE_ARRAY_ACCESS: {
+            char* indexExpr = generateTACExpr(node->data.array_access.index);
+            char* temp = newTemp();
+            
+            // Create a string like "arr[t0]"
+            char* arrayRef = malloc(strlen(node->data.array_access.name) + strlen(indexExpr) + 10);
+            sprintf(arrayRef, "%s[%s]", node->data.array_access.name, indexExpr);
+            
+            appendTAC(createTAC(TAC_ASSIGN, arrayRef, NULL, temp));
+            free(arrayRef);
+            return temp;
+        }
         
         default:
             return NULL;
@@ -112,19 +116,24 @@ void generateTAC(ASTNode* node) {
             generateTAC(node->data.stmtlist.next);
             break;
 
-        /* IF/ELSE handling disabled - skip these node types if present 
-        case NODE_IF:
-        case NODE_IF_ELSE:
-            Intentionally ignore if/else nodes until feature is implemented. 
-            break;
-            */
         /* Handle array access expression */
-        case NODE_ARRAY_ACCESS: {
-            char* indexTemp = generateTACExpr(node->data.arrayaccess.index);
-            char* resultTemp = newTemp();
-            appendTAC(createTAC(TAC_ARRAY_ACCESS, indexTemp, NULL, resultTemp));
+        case NODE_ARRAY_DECL:
+            appendTAC(createTAC(TAC_DECL, NULL, NULL, node->data.array_decl.name));
             break;
-        }   
+        
+        case NODE_ARRAY_ASSIGN: {
+            // Generate: arr[index] = value
+            char* indexExpr = generateTACExpr(node->data.array_assign.index);
+            char* valueExpr = generateTACExpr(node->data.array_assign.value);
+            
+            // Create a string like "arr[t0]"
+            char* arrayRef = malloc(strlen(node->data.array_assign.name) + strlen(indexExpr) + 10);
+            sprintf(arrayRef, "%s[%s]", node->data.array_assign.name, indexExpr);
+            
+            appendTAC(createTAC(TAC_ASSIGN, valueExpr, NULL, arrayRef));
+            free(arrayRef);
+            break;
+        }
             
         default:
             break;
@@ -154,24 +163,6 @@ void printTAC() {
             case TAC_PRINT:
                 printf("PRINT %s", curr->arg1);
                 printf("          // Output value of %s\n", curr->arg1);
-                break;
-            case TAC_LABEL:                                          /* ADD THIS */
-                printf("%s:", curr->arg1);
-                printf("             // Label for jump target\n");
-                break;
-            case TAC_GOTO:                                           /* ADD THIS */
-                printf("GOTO %s", curr->arg1);
-                printf("          // Unconditional jump\n");
-                break;
-            case TAC_IF_FALSE:                                       /* ADD THIS */
-                printf("IF_FALSE %s GOTO %s", curr->arg1, curr->arg2);
-                printf("  // Jump if condition is false\n");
-                break;
-            case TAC_ARRAY_ACCESS:                                   /* ADD THIS */
-                printf("%s = ARRAY[%s]", curr->result, curr->arg1);
-                printf("  // Array access: store in %s\n", curr->result);
-                break;
-            default:
                 break;
         }
         curr = curr->next;
@@ -269,33 +260,7 @@ void optimizeTAC() {
                 
                 newInstr = createTAC(TAC_PRINT, value, NULL, NULL);
                 break;
-            }
-            /* -------- ADDITIONS PROJECT 2 --------*/
-            case TAC_LABEL:
-                newInstr = createTAC(TAC_LABEL, curr->arg1, NULL, NULL);
-                break;
-            
-            case TAC_GOTO:
-                newInstr = createTAC(TAC_GOTO, curr->arg1, NULL, NULL);
-                break;
-            
-            case TAC_IF_FALSE: {
-                char* cond = curr->arg1;
-                
-                // Propagate condition variable
-                for (int i = valueCount - 1; i >= 0; i--) {
-                    if (strcmp(values[i].var, cond) == 0) {
-                        cond = values[i].value;
-                        break;
-                    }
-                }
-                
-                newInstr = createTAC(TAC_IF_FALSE, cond, curr->arg2, NULL);
-                break;
-            }
-            case TAC_ARRAY_ACCESS:                                   /* ADD THIS */
-                newInstr = createTAC(TAC_ARRAY_ACCESS, curr->arg1, NULL, curr->result);
-                break;  
+            }    
         }
         
         if (newInstr) {
@@ -332,31 +297,11 @@ void printOptimizedTAC() {
                 break;
             case TAC_PRINT:
                 printf("PRINT %s", curr->arg1);
-                // Check if it's a constant
                 if (curr->arg1[0] >= '0' && curr->arg1[0] <= '9') {
                     printf("          // Print constant: %s\n", curr->arg1);
                 } else {
-                    printf("          // Print variable\n");
+                    printf("          // Print variable: %s\n", curr->arg1);
                 }
-                break;
-            /* -------- ADDITIONS PROJECT 2 --------*/
-            case TAC_LABEL:                                          
-                printf("%s:", curr->arg1);
-                printf("             // Label for jump target\n");
-                break;
-            case TAC_GOTO:                                                       
-                printf("GOTO %s", curr->arg1);
-                printf("          // Unconditional jump\n");
-                break;
-            case TAC_IF_FALSE:                                       
-                printf("IF_FALSE %s GOTO %s", curr->arg1, curr->        arg2);
-                printf("  // Jump if condition is false\n");
-                break;
-            case TAC_ARRAY_ACCESS:                                   
-                printf("%s = ARRAY[%s]", curr->result, curr->arg1);
-                printf("  // Array access: store in %s\n", curr->result);
-                break;
-            default:
                 break;
         }
         curr = curr->next;

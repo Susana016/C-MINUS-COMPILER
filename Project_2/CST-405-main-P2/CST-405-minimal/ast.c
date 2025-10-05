@@ -50,6 +50,34 @@ ASTNode* createAssign(char* var, ASTNode* value) {
     return node;
 }
 
+/* Create an array declaration node */
+ASTNode* createArrayDecl(char* name, int size) {
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_ARRAY_DECL;
+    node->data.array_decl.name = strdup(name);
+    node->data.array_decl.size = size;
+    return node;
+}
+
+/* Create an array access node */
+ASTNode* createArrayAccess(char* name, ASTNode* index) {
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_ARRAY_ACCESS;
+    node->data.array_access.name = strdup(name);
+    node->data.array_access.index = index;
+    return node;
+}
+
+/* Create an array assignment node */
+ASTNode* createArrayAssign(char* name, ASTNode* index, ASTNode* value) {
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_ARRAY_ASSIGN;
+    node->data.array_assign.name = strdup(name);
+    node->data.array_assign.index = index;
+    node->data.array_assign.value = value;
+    return node;
+}
+
 /* Create a print statement node */
 ASTNode* createPrint(ASTNode* expr) {
     ASTNode* node = malloc(sizeof(ASTNode));
@@ -64,17 +92,6 @@ ASTNode* createStmtList(ASTNode* stmt1, ASTNode* stmt2) {
     node->type = NODE_STMT_LIST;
     node->data.stmtlist.stmt = stmt1;  /* First statement */
     node->data.stmtlist.next = stmt2;  /* Rest of list */
-    return node;
-}
-
-/* -------- ADDITIONS PROJECT 2 --------*/
-/* -------- ADDITIONS PROJECT 2 --------*/
-/* If/If-Else constructors removed */
-/* Create an array access node */
-ASTNode* createArrayAccess(ASTNode* index) {
-    ASTNode* node = malloc(sizeof(ASTNode));
-    node->type = NODE_ARRAY_ACCESS;
-    node->data.arrayaccess.index = index;  /* Index expression */
     return node;
 }
 
@@ -101,6 +118,10 @@ void printAST(ASTNode* node, int level) {
         case NODE_DECL:
             printf("DECL: %s\n", node->data.name);
             break;
+        case NODE_DECL_INIT:
+            printf("DECL_INIT: %s\n", node->data.decl_init.name);
+            printAST(node->data.decl_init.value, level + 1);
+            break;
         case NODE_ASSIGN:
             printf("ASSIGN: %s\n", node->data.assign.var);
             printAST(node->data.assign.value, level + 1);
@@ -109,19 +130,24 @@ void printAST(ASTNode* node, int level) {
             printf("PRINT\n");
             printAST(node->data.expr, level + 1);
             break;
+        case NODE_ARRAY_DECL:
+            printf("ARRAY_DECL: %s[%d]\n", node->data.array_decl.name, node->data.array_decl.size);
+            break;
+        case NODE_ARRAY_ACCESS:
+            printf("ARRAY_ACCESS: %s\n", node->data.array_access.name);
+            printAST(node->data.array_access.index, level + 1);
+            break;
+        case NODE_ARRAY_ASSIGN:
+            printf("ARRAY_ASSIGN: %s\n", node->data.array_assign.name);
+            printAST(node->data.array_assign.index, level + 1);
+            printAST(node->data.array_assign.value, level + 1);
+            break;
         case NODE_STMT_LIST:
             /* Print statements in sequence at same level */
             printAST(node->data.stmtlist.stmt, level);
             printAST(node->data.stmtlist.next, level);
             break;
-    
-        /* -------- ADDITIONS PROJECT 2 (if/else disabled) -------- */
-    /* case labels for if/else removed */
-        case NODE_ARRAY_ACCESS:
-            printf("ARRAY ACCESS\n");
-            for (int i = 0; i < level + 1; i++) printf("  ");
-            printf("Index:\n");
-            printAST(node->data.arrayaccess.index, level + 2);
-            break;  
+        default:
+            printf("UNKNOWN NODE TYPE\n");      
     }
 }

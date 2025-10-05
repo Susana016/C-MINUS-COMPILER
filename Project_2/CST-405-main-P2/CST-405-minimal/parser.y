@@ -32,10 +32,10 @@ ASTNode* root = NULL;          /* Root of the Abstract Syntax Tree */
 %token <num> NUM              /* Number token carries an integer value */
 %token <str> ID               /* Identifier token carries a string */
 %token INT PRINT /* IF ELSE */ /* Keywords have no semantic value; IF/ELSE disabled */
-%token LBRACE RBRACE LPAREN RPAREN LBRACKET RBRACKET/* Braces and parentheses */
+%token LPAREN RPAREN LBRACKET RBRACKET LBRACE RBRACE
 
 /* NON-TERMINAL TYPES - Define what type each grammar rule returns */
-%type <node> program stmt_list stmt decl assign expr print_stmt /* if_stmt if_else_stmt disabled */
+%type <node> program stmt_list stmt decl assign expr print_stmt 
 
 /* OPERATOR PRECEDENCE AND ASSOCIATIVITY */
 %left '+'  /* Addition is left-associative: a+b+c = (a+b)+c */
@@ -78,10 +78,17 @@ decl:
         $$ = createDecl($2);  /* $2 is the ID token's string value */
         free($2);             /* Free the string copy from scanner */
     }
-    | INT ID LBRACKET NUM RBRACKET ';' {
-        /* Simple array declaration - backend ignores size; create name decl */
-        $$ = createDecl($2);
+    | INT ID '=' expr ';' {   /* ADD THIS */
+        /* Declaration with initialization: int x = 5; */
+        ASTNode* decl = createDecl($2);
+        ASTNode* assign = createAssign($2, $4);
+        $$ = createStmtList(decl, assign);
         free($2);
+    }
+        | INT ID LBRACKET NUM RBRACKET ';' { 
+        /* Array declaration (e.g., int arr[10];) */
+        $$ = createArrayDecl($2, $4);  /* $2 = ID, $4 = NUM size */
+        free($2);                      /* Free the identifier string */
     }
     ;
 
@@ -91,6 +98,11 @@ assign:
         /* Create assignment node with variable name and expression */
         $$ = createAssign($1, $3);  /* $1 = ID, $3 = expr */
         free($1);                   /* Free the identifier string */
+    }
+        | ID LBRACKET expr RBRACKET '=' expr ';' { 
+        /* Array element assignment (e.g., arr[2] = expr;) */
+        $$ = createArrayAssign($1, $3, $6);  /* $1=ID, $3=index expr, $6=value expr */
+        free($1);                            /* Free the identifier string */
     }
     ;
 
@@ -109,17 +121,10 @@ expr:
         /* Addition operation - builds binary tree */
         $$ = createBinOp('+', $1, $3);  /* Left child, op, right child */
     }
-    | LPAREN expr RPAREN { 
-        /* Parenthesized expression - just pass through */
-        $$ = $2;  /* $2 is the expr inside the parentheses */
-    }
-    | LBRACE stmt_list RBRACE { 
-        /* Block of statements treated as an expression */
-        $$ = $2;  /* $2 is the stmt_list inside the braces */
-    }
-    | LBRACKET expr RBRACKET { 
-        /* Array access expression */
-        $$ = createArrayAccess($2);  /* $2 is the index expression */
+    | ID LBRACKET expr RBRACKET { 
+        /* Array element access (e.g., arr[2]) */
+        $$ = createArrayAccess($1, $3);  /* $1=ID, $3=index expr */
+        free($1);                        /* Free the identifier string */
     }
     ;
 
