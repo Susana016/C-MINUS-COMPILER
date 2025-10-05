@@ -90,48 +90,19 @@ void genStmt(ASTNode* node) {
             genStmt(node->data.stmtlist.next);
             break;
         
-        /* -------- ADDITIONS PROJECT 2 --------*/
-        case NODE_IF: {
-            int currentLabel = ifLabelCounter++;
-            
-            // Generate condition
-            genExpr(node->data.ifstmt.condition);
-            
-            // Branch if zero (false) to end label
-            fprintf(output, "    # If statement\n");
-            fprintf(output, "    beqz $t%d, end_if_%d\n", tempReg - 1, currentLabel);
-            tempReg = 0;
-            
-            // Generate then block
-            genStmt(node->data.ifstmt.thenBlock);
-            
-            // End label
-            fprintf(output, "end_if_%d:\n", currentLabel);
-            break;
-        }
-        case NODE_IF_ELSE: {
-            int currentLabel = ifLabelCounter++;
-            
-            // Generate condition
-            genExpr(node->data.ifelsestmt.condition);
-            
-            // Branch if zero (false) to else label
-            fprintf(output, "    # If-Else statement\n");
-            fprintf(output, "    beqz $t%d, else_%d\n", tempReg - 1, currentLabel);
-            tempReg = 0;
-            
-            // Generate then block
-            genStmt(node->data.ifelsestmt.thenBlock);
-            
-            // Jump to end label after then block
-            fprintf(output, "    j end_if_%d\n", currentLabel);
-            
-            // Else label and block
-            fprintf(output, "else_%d:\n", currentLabel);
-            genStmt(node->data.ifelsestmt.elseBlock);
-            
-            // End label
-            fprintf(output, "end_if_%d:\n", currentLabel);
+        /* IF/ELSE codegen disabled - skip these node types if encountered 
+        case NODE_IF:
+        case NODE_IF_ELSE:
+            If/Else behavior intentionally disabled; no code emitted. 
+            break; */
+        case NODE_ARRAY_ACCESS: {
+            // Assuming single array named "array" declared at offset 0
+            genExpr(node->data.arrayaccess.index);
+            fprintf(output, "    # Array access\n");
+            fprintf(output, "    sll $t%d, $t%d, 2\n", tempReg - 1, tempReg - 1); // Multiply index by 4
+            fprintf(output, "    addi $t%d, $sp, 0\n", getNextTemp()); // Base address of array
+            fprintf(output, "    add $t%d, $t%d, $t%d\n", tempReg - 1, tempReg - 1, tempReg - 2); // Address of element
+            fprintf(output, "    lw $t%d, 0($t%d)\n", getNextTemp(), tempReg - 1); // Load element
             break;
         }
             

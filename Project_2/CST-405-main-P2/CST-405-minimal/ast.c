@@ -68,21 +68,13 @@ ASTNode* createStmtList(ASTNode* stmt1, ASTNode* stmt2) {
 }
 
 /* -------- ADDITIONS PROJECT 2 --------*/
-/* Create an if statement node */
-ASTNode* createIf(ASTNode* condition, ASTNode* thenBlock) {
+/* -------- ADDITIONS PROJECT 2 --------*/
+/* If/If-Else constructors removed */
+/* Create an array access node */
+ASTNode* createArrayAccess(ASTNode* index) {
     ASTNode* node = malloc(sizeof(ASTNode));
-    node->type = NODE_IF;
-    node->data.ifstmt.condition = condition;  /* Condition expression */
-    node->data.ifstmt.thenBlock = thenBlock;  /* Then block statements */
-    return node;
-}
-/* Create an if-else statement node */
-ASTNode* createIfElse(ASTNode* condition, ASTNode* thenBlock, ASTNode* elseBlock) {
-    ASTNode* node = malloc(sizeof(ASTNode));
-    node->type = NODE_IF_ELSE;  
-    node->data.ifelsestmt.condition = condition;  /* Condition expression */
-    node->data.ifelsestmt.thenBlock = thenBlock;  /* Then block statements */
-    node->data.ifelsestmt.elseBlock = elseBlock;  /* Else block statements */
+    node->type = NODE_ARRAY_ACCESS;
+    node->data.arrayaccess.index = index;  /* Index expression */
     return node;
 }
 
@@ -122,30 +114,14 @@ void printAST(ASTNode* node, int level) {
             printAST(node->data.stmtlist.stmt, level);
             printAST(node->data.stmtlist.next, level);
             break;
-
     
-        /* -------- ADDITIONS PROJECT 2 --------*/
-        case NODE_IF:
-            printf("IF\n");
+        /* -------- ADDITIONS PROJECT 2 (if/else disabled) -------- */
+    /* case labels for if/else removed */
+        case NODE_ARRAY_ACCESS:
+            printf("ARRAY ACCESS\n");
             for (int i = 0; i < level + 1; i++) printf("  ");
-            printf("Condition:\n");
-            printAST(node->data.ifstmt.condition, level + 2);
-            for (int i = 0; i < level + 1; i++) printf("  ");
-            printf("Then:\n");
-            printAST(node->data.ifstmt.thenBlock, level + 2);
-            break;
-            
-        case NODE_IF_ELSE:
-            printf("IF-ELSE\n");
-            for (int i = 0; i < level + 1; i++) printf("  ");
-            printf("Condition:\n");
-            printAST(node->data.ifelsestmt.condition, level + 2);
-            for (int i = 0; i < level + 1; i++) printf("  ");
-            printf("Then:\n");
-            printAST(node->data.ifelsestmt.thenBlock, level + 2);
-            for (int i = 0; i < level + 1; i++) printf("  ");
-            printf("Else:\n");
-            printAST(node->data.ifelsestmt.elseBlock, level + 2);
-            break;        
+            printf("Index:\n");
+            printAST(node->data.arrayaccess.index, level + 2);
+            break;  
     }
 }

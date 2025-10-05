@@ -16,8 +16,7 @@ typedef enum {
     NODE_ASSIGN,     /* Assignment statement (e.g., x = 10) */
     NODE_PRINT,      /* Print statement (e.g., print(x)) */
     NODE_STMT_LIST,  /* List of statements (program structure) */
-    NODE_IF,         /* If statement */
-    NODE_IF_ELSE        /* If-else statement */
+    NODE_ARRAY_ACCESS   /* Array access (e.g., arr[0]) */
 } NodeType;
 
 /* AST NODE STRUCTURE
@@ -57,18 +56,26 @@ typedef struct ASTNode {
             struct ASTNode* next;       /* Rest of the list */
         } stmtlist;
 
-        /* -------- ADDITIONS PROJECT 2 --------*/
-        /* If statement structure (NODE_IF) */
+        /* -------- ADDITIONS PROJECT 2 (some features partially disabled) --------*/
+        /* If/If-Else structures are defined here so other compilation units
+           that reference `node->data.ifstmt` or `node->data.ifelsestmt`
+           can compile even when higher-level creation functions are
+           intentionally disabled. Implementations can remain commented
+           in `ast.c` until the feature is re-enabled. */
         struct {
             struct ASTNode* condition;  /* Condition expression */
-            struct ASTNode* thenBlock; /* Statements to execute if true */
+            struct ASTNode* thenBlock;  /* Then-block statements */
         } ifstmt;
-        /* If-else statement structure (NODE_IF_ELSE) */
         struct {
-            struct ASTNode* condition;  /* Boolean condition */
-            struct ASTNode* thenBlock;  /* Statements to execute if true */
-            struct ASTNode* elseBlock;  /* Statements to execute if false */
+            struct ASTNode* condition;  /* Condition expression */
+            struct ASTNode* thenBlock;  /* Then-block statements */
+            struct ASTNode* elseBlock;  /* Else-block statements */
         } ifelsestmt;
+
+        /* Array access structure (NODE_ARRAY_ACCESS) */
+        struct {
+            struct ASTNode* index;      /* Index expression */
+        } arrayaccess;
     } data;
 } ASTNode;
 
@@ -83,9 +90,10 @@ ASTNode* createAssign(char* var, ASTNode* value);               /* Create assign
 ASTNode* createPrint(ASTNode* expr);                            /* Create print node */
 ASTNode* createStmtList(ASTNode* stmt1, ASTNode* stmt2);        /* Create statement list */
 
-/* -------- ADDITIONS PROJECT 2 --------*/
-ASTNode* createIf(ASTNode* condition, ASTNode* thenBlock);      /* Create if statement node */
-ASTNode* createIfElse(ASTNode* condition, ASTNode* thenBlock, ASTNode* elseBlock); /* Create if-else statement node */
+/* -------- ADDITIONS PROJECT 2 --------
+ASTNode* createIf(ASTNode* condition, ASTNode* thenBlock);       Create if statement node 
+ASTNode* createIfElse(ASTNode* condition, ASTNode* thenBlock, ASTNode* elseBlock);  Create if-else statement node */
+ASTNode* createArrayAccess(ASTNode* index);                    /* Create array access node */
 
 /* AST DISPLAY FUNCTION */
 void printAST(ASTNode* node, int level);                        /* Pretty-print the AST */

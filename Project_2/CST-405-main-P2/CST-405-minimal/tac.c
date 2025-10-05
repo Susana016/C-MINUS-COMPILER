@@ -112,48 +112,19 @@ void generateTAC(ASTNode* node) {
             generateTAC(node->data.stmtlist.next);
             break;
 
-        case NODE_IF: {
-            // Generate condition expression
-            char* condTemp = generateTACExpr(node->data.ifstmt.condition);
-            
-            char* labelEnd = newLabel();  // Label after if block
-            
-            // If condition is false, jump to end
-            appendTAC(createTAC(TAC_IF_FALSE, condTemp, labelEnd, NULL));
-            
-            // Then block
-            generateTAC(node->data.ifstmt.thenBlock);
-            
-            // End label
-            appendTAC(createTAC(TAC_LABEL, labelEnd, NULL, NULL));
+        /* IF/ELSE handling disabled - skip these node types if present 
+        case NODE_IF:
+        case NODE_IF_ELSE:
+            Intentionally ignore if/else nodes until feature is implemented. 
             break;
-        }
-        
-        /* NEW: Handle if-else statement */
-        case NODE_IF_ELSE: {
-            // Generate condition expression
-            char* condTemp = generateTACExpr(node->data.ifelsestmt.condition);
-            
-            char* labelElse = newLabel();  // Label for else block
-            char* labelEnd = newLabel();   // Label after entire if-else
-            
-            // If condition is false, jump to else
-            appendTAC(createTAC(TAC_IF_FALSE, condTemp, labelElse, NULL));
-            
-            // Then block
-            generateTAC(node->data.ifelsestmt.thenBlock);
-            
-            // Jump over else block
-            appendTAC(createTAC(TAC_GOTO, labelEnd, NULL, NULL));
-            
-            // Else label and block
-            appendTAC(createTAC(TAC_LABEL, labelElse, NULL, NULL));
-            generateTAC(node->data.ifelsestmt.elseBlock);
-            
-            // End label
-            appendTAC(createTAC(TAC_LABEL, labelEnd, NULL, NULL));
+            */
+        /* Handle array access expression */
+        case NODE_ARRAY_ACCESS: {
+            char* indexTemp = generateTACExpr(node->data.arrayaccess.index);
+            char* resultTemp = newTemp();
+            appendTAC(createTAC(TAC_ARRAY_ACCESS, indexTemp, NULL, resultTemp));
             break;
-        }
+        }   
             
         default:
             break;
@@ -195,6 +166,10 @@ void printTAC() {
             case TAC_IF_FALSE:                                       /* ADD THIS */
                 printf("IF_FALSE %s GOTO %s", curr->arg1, curr->arg2);
                 printf("  // Jump if condition is false\n");
+                break;
+            case TAC_ARRAY_ACCESS:                                   /* ADD THIS */
+                printf("%s = ARRAY[%s]", curr->result, curr->arg1);
+                printf("  // Array access: store in %s\n", curr->result);
                 break;
             default:
                 break;
@@ -318,6 +293,9 @@ void optimizeTAC() {
                 newInstr = createTAC(TAC_IF_FALSE, cond, curr->arg2, NULL);
                 break;
             }
+            case TAC_ARRAY_ACCESS:                                   /* ADD THIS */
+                newInstr = createTAC(TAC_ARRAY_ACCESS, curr->arg1, NULL, curr->result);
+                break;  
         }
         
         if (newInstr) {
@@ -373,6 +351,10 @@ void printOptimizedTAC() {
             case TAC_IF_FALSE:                                       
                 printf("IF_FALSE %s GOTO %s", curr->arg1, curr->        arg2);
                 printf("  // Jump if condition is false\n");
+                break;
+            case TAC_ARRAY_ACCESS:                                   
+                printf("%s = ARRAY[%s]", curr->result, curr->arg1);
+                printf("  // Array access: store in %s\n", curr->result);
                 break;
             default:
                 break;

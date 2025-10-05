@@ -9,7 +9,6 @@ main:
     # Declared a at offset 0
     # Declared b at offset 4
     # Declared sum at offset 8
-    # Declared array at offset 12
     li $t0, 5
     sw $t0, 0($sp)
     li $t0, 7

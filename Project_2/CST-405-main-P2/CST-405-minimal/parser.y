@@ -31,11 +31,11 @@ ASTNode* root = NULL;          /* Root of the Abstract Syntax Tree */
 /* TOKEN DECLARATIONS with their semantic value types */
 %token <num> NUM              /* Number token carries an integer value */
 %token <str> ID               /* Identifier token carries a string */
-%token INT PRINT IF ELSE      /* Keywords have no semantic value */
-%token LBRACE RBRACE LPAREN RPAREN /* Braces and parentheses */
+%token INT PRINT /* IF ELSE */ /* Keywords have no semantic value; IF/ELSE disabled */
+%token LBRACE RBRACE LPAREN RPAREN LBRACKET RBRACKET/* Braces and parentheses */
 
 /* NON-TERMINAL TYPES - Define what type each grammar rule returns */
-%type <node> program stmt_list stmt decl assign expr print_stmt if_stmt if_else_stmt /* ADDITION PROJECT 2 */
+%type <node> program stmt_list stmt decl assign expr print_stmt /* if_stmt if_else_stmt disabled */
 
 /* OPERATOR PRECEDENCE AND ASSOCIATIVITY */
 %left '+'  /* Addition is left-associative: a+b+c = (a+b)+c */
@@ -69,8 +69,6 @@ stmt:
     decl        /* Variable declaration */
     | assign    /* Assignment statement */
     | print_stmt /* Print statement */
-    | if_stmt  /* If statement - ADDITION PROJECT 2 */
-    | if_else_stmt /* If-else statement - ADDITION PROJECT 2 */
     ;
 
 /* DECLARATION RULE - "int x;" */
@@ -79,6 +77,11 @@ decl:
         /* Create declaration node and free the identifier string */
         $$ = createDecl($2);  /* $2 is the ID token's string value */
         free($2);             /* Free the string copy from scanner */
+    }
+    | INT ID LBRACKET NUM RBRACKET ';' {
+        /* Simple array declaration - backend ignores size; create name decl */
+        $$ = createDecl($2);
+        free($2);
     }
     ;
 
@@ -114,6 +117,10 @@ expr:
         /* Block of statements treated as an expression */
         $$ = $2;  /* $2 is the stmt_list inside the braces */
     }
+    | LBRACKET expr RBRACKET { 
+        /* Array access expression */
+        $$ = createArrayAccess($2);  /* $2 is the index expression */
+    }
     ;
 
 /* PRINT STATEMENT - "print(expr);" */
@@ -124,24 +131,7 @@ print_stmt:
     }
     ;
 
-/* -------- ADDITIONS PROJECT 2 --------*/
-/* IF STATEMENT - "if (condition) { statements }" */
-if_stmt:
-    IF LPAREN expr RPAREN LBRACE stmt_list RBRACE {
-        /* Create if statement node with condition and then block */
-        $$ = createIf($3, $6);  /* $3 = condition, $
-6 = then block */
-    }
-    ;  
-
-/* IF-ELSE STATEMENT - "if (condition) { statements } else { statements }" */
-if_else_stmt:
-    IF LPAREN expr RPAREN LBRACE stmt_list RBRACE ELSE LBRACE
-    stmt_list RBRACE {
-        /* Create if-else statement node with condition, then block, and else block */
-        $$ = createIfElse($3, $6, $10);  /* $3 = condition, $6 = then block, $10 = else block */
-    }
-    ;   
+/* IF/ELSE grammar removed - if/else functionality disabled. */
 %%
 
 /* ERROR HANDLING - Called by Bison when syntax error detected */

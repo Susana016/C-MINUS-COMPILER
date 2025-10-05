@@ -17,7 +17,8 @@ typedef enum {
     TAC_DECL,    /* Declaration: declare result */
     TAC_GOTO,    /* Unconditional jump to label */
     TAC_IF_FALSE, /* Conditional jump if arg1 is false */
-    TAC_LABEL    /* Label definition */
+    TAC_LABEL,    /* Label definition */
+    TAC_ARRAY_ACCESS /* Array access: result = array[arg1] */
 } TACOp;
 
 /* TAC INSTRUCTION STRUCTURE */

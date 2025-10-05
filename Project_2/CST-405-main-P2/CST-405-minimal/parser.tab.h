@@ -43,12 +43,12 @@
      ID = 259,
      INT = 260,
      PRINT = 261,
-     IF = 262,
-     ELSE = 263,
-     LBRACE = 264,
-     RBRACE = 265,
-     LPAREN = 266,
-     RPAREN = 267
+     LBRACE = 262,
+     RBRACE = 263,
+     LPAREN = 264,
+     RPAREN = 265,
+     LBRACKET = 266,
+     RBRACKET = 267
    };
 #endif
 /* Tokens.  */
@@ -56,12 +56,12 @@
 #define ID 259
 #define INT 260
 #define PRINT 261
-#define IF 262
-#define ELSE 263
-#define LBRACE 264
-#define RBRACE 265
-#define LPAREN 266
-#define RPAREN 267
+#define LBRACE 262
+#define RBRACE 263
+#define LPAREN 264
+#define RPAREN 265
+#define LBRACKET 266
+#define RBRACKET 267
 
 
 
