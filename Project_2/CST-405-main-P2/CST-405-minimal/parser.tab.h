@@ -42,7 +42,13 @@
      NUM = 258,
      ID = 259,
      INT = 260,
-     PRINT = 261
+     PRINT = 261,
+     IF = 262,
+     ELSE = 263,
+     LBRACE = 264,
+     RBRACE = 265,
+     LPAREN = 266,
+     RPAREN = 267
    };
 #endif
 /* Tokens.  */
@@ -50,6 +56,12 @@
 #define ID 259
 #define INT 260
 #define PRINT 261
+#define IF 262
+#define ELSE 263
+#define LBRACE 264
+#define RBRACE 265
+#define LPAREN 266
+#define RPAREN 267
 
 
 
@@ -63,7 +75,7 @@ typedef union YYSTYPE
     struct ASTNode* node;   /* For AST nodes */
 }
 /* Line 1529 of yacc.c.  */
-#line 67 "parser.tab.h"
+#line 79 "parser.tab.h"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1

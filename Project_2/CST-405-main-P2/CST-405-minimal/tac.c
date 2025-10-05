@@ -11,6 +11,7 @@ void initTAC() {
     tacList.head = NULL;
     tacList.tail = NULL;
     tacList.tempCount = 0;
+    tacList.labelCount = 0; /* -------- ADDITIONS PROJECT 2 --------*/
     optimizedList.head = NULL;
     optimizedList.tail = NULL;
 }
@@ -19,6 +20,13 @@ char* newTemp() {
     char* temp = malloc(10);
     sprintf(temp, "t%d", tacList.tempCount++);
     return temp;
+}
+
+/* -------- ADDITIONS PROJECT 2 --------*/
+char* newLabel() {
+    char* label = malloc(10);
+    sprintf(label, "L%d", tacList.labelCount++);
+    return label;
 }
 
 TACInstr* createTAC(TACOp op, char* arg1, char* arg2, char* result) {
@@ -103,6 +111,49 @@ void generateTAC(ASTNode* node) {
             generateTAC(node->data.stmtlist.stmt);
             generateTAC(node->data.stmtlist.next);
             break;
+
+        case NODE_IF: {
+            // Generate condition expression
+            char* condTemp = generateTACExpr(node->data.ifstmt.condition);
+            
+            char* labelEnd = newLabel();  // Label after if block
+            
+            // If condition is false, jump to end
+            appendTAC(createTAC(TAC_IF_FALSE, condTemp, labelEnd, NULL));
+            
+            // Then block
+            generateTAC(node->data.ifstmt.thenBlock);
+            
+            // End label
+            appendTAC(createTAC(TAC_LABEL, labelEnd, NULL, NULL));
+            break;
+        }
+        
+        /* NEW: Handle if-else statement */
+        case NODE_IF_ELSE: {
+            // Generate condition expression
+            char* condTemp = generateTACExpr(node->data.ifelsestmt.condition);
+            
+            char* labelElse = newLabel();  // Label for else block
+            char* labelEnd = newLabel();   // Label after entire if-else
+            
+            // If condition is false, jump to else
+            appendTAC(createTAC(TAC_IF_FALSE, condTemp, labelElse, NULL));
+            
+            // Then block
+            generateTAC(node->data.ifelsestmt.thenBlock);
+            
+            // Jump over else block
+            appendTAC(createTAC(TAC_GOTO, labelEnd, NULL, NULL));
+            
+            // Else label and block
+            appendTAC(createTAC(TAC_LABEL, labelElse, NULL, NULL));
+            generateTAC(node->data.ifelsestmt.elseBlock);
+            
+            // End label
+            appendTAC(createTAC(TAC_LABEL, labelEnd, NULL, NULL));
+            break;
+        }
             
         default:
             break;
@@ -132,6 +183,18 @@ void printTAC() {
             case TAC_PRINT:
                 printf("PRINT %s", curr->arg1);
                 printf("          // Output value of %s\n", curr->arg1);
+                break;
+            case TAC_LABEL:                                          /* ADD THIS */
+                printf("%s:", curr->arg1);
+                printf("             // Label for jump target\n");
+                break;
+            case TAC_GOTO:                                           /* ADD THIS */
+                printf("GOTO %s", curr->arg1);
+                printf("          // Unconditional jump\n");
+                break;
+            case TAC_IF_FALSE:                                       /* ADD THIS */
+                printf("IF_FALSE %s GOTO %s", curr->arg1, curr->arg2);
+                printf("  // Jump if condition is false\n");
                 break;
             default:
                 break;
@@ -232,6 +295,29 @@ void optimizeTAC() {
                 newInstr = createTAC(TAC_PRINT, value, NULL, NULL);
                 break;
             }
+            /* -------- ADDITIONS PROJECT 2 --------*/
+            case TAC_LABEL:
+                newInstr = createTAC(TAC_LABEL, curr->arg1, NULL, NULL);
+                break;
+            
+            case TAC_GOTO:
+                newInstr = createTAC(TAC_GOTO, curr->arg1, NULL, NULL);
+                break;
+            
+            case TAC_IF_FALSE: {
+                char* cond = curr->arg1;
+                
+                // Propagate condition variable
+                for (int i = valueCount - 1; i >= 0; i--) {
+                    if (strcmp(values[i].var, cond) == 0) {
+                        cond = values[i].value;
+                        break;
+                    }
+                }
+                
+                newInstr = createTAC(TAC_IF_FALSE, cond, curr->arg2, NULL);
+                break;
+            }
         }
         
         if (newInstr) {
@@ -274,6 +360,19 @@ void printOptimizedTAC() {
                 } else {
                     printf("          // Print variable\n");
                 }
+                break;
+            /* -------- ADDITIONS PROJECT 2 --------*/
+            case TAC_LABEL:                                          
+                printf("%s:", curr->arg1);
+                printf("             // Label for jump target\n");
+                break;
+            case TAC_GOTO:                                                       
+                printf("GOTO %s", curr->arg1);
+                printf("          // Unconditional jump\n");
+                break;
+            case TAC_IF_FALSE:                                       
+                printf("IF_FALSE %s GOTO %s", curr->arg1, curr->        arg2);
+                printf("  // Jump if condition is false\n");
                 break;
             default:
                 break;

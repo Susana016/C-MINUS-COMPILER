@@ -16,6 +16,8 @@
 
 "int"           { return INT; }
 "print"         { return PRINT; }
+"if"            { return IF; }
+"else"          { return ELSE; }
 
 [a-zA-Z_][a-zA-Z0-9_]* { 
     yylval.str = strdup(yytext);
@@ -27,11 +29,15 @@
     return NUM; 
 }
 
+
 "+"             { return '+'; }
 "="             { return '='; }
 ";"             { return ';'; }
-"("             { return '('; }
-")"             { return ')'; }
+"("             { return LPAREN; }  
+")"             { return RPAREN; }   
+"{"             { return LBRACE; }   
+"}"             { return RBRACE; }   
+
 
 [ \t\n]         { }
 

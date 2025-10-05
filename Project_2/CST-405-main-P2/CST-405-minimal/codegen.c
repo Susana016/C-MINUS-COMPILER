@@ -47,6 +47,8 @@ void genExpr(ASTNode* node) {
 void genStmt(ASTNode* node) {
     if (!node) return;
     
+    static int ifLabelCounter = 0; /* -------- ADDITIONS PROJECT 2 --------*/
+
     switch(node->type) {
         case NODE_DECL: {
             int offset = addVar(node->data.name);
@@ -87,6 +89,51 @@ void genStmt(ASTNode* node) {
             genStmt(node->data.stmtlist.stmt);
             genStmt(node->data.stmtlist.next);
             break;
+        
+        /* -------- ADDITIONS PROJECT 2 --------*/
+        case NODE_IF: {
+            int currentLabel = ifLabelCounter++;
+            
+            // Generate condition
+            genExpr(node->data.ifstmt.condition);
+            
+            // Branch if zero (false) to end label
+            fprintf(output, "    # If statement\n");
+            fprintf(output, "    beqz $t%d, end_if_%d\n", tempReg - 1, currentLabel);
+            tempReg = 0;
+            
+            // Generate then block
+            genStmt(node->data.ifstmt.thenBlock);
+            
+            // End label
+            fprintf(output, "end_if_%d:\n", currentLabel);
+            break;
+        }
+        case NODE_IF_ELSE: {
+            int currentLabel = ifLabelCounter++;
+            
+            // Generate condition
+            genExpr(node->data.ifelsestmt.condition);
+            
+            // Branch if zero (false) to else label
+            fprintf(output, "    # If-Else statement\n");
+            fprintf(output, "    beqz $t%d, else_%d\n", tempReg - 1, currentLabel);
+            tempReg = 0;
+            
+            // Generate then block
+            genStmt(node->data.ifelsestmt.thenBlock);
+            
+            // Jump to end label after then block
+            fprintf(output, "    j end_if_%d\n", currentLabel);
+            
+            // Else label and block
+            fprintf(output, "else_%d:\n", currentLabel);
+            genStmt(node->data.ifelsestmt.elseBlock);
+            
+            // End label
+            fprintf(output, "end_if_%d:\n", currentLabel);
+            break;
+        }
             
         default:
             break;

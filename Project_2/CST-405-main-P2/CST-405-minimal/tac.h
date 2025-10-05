@@ -14,7 +14,10 @@ typedef enum {
     TAC_ADD,     /* Addition: result = arg1 + arg2 */
     TAC_ASSIGN,  /* Assignment: result = arg1 */
     TAC_PRINT,   /* Print: print(arg1) */
-    TAC_DECL     /* Declaration: declare result */
+    TAC_DECL,    /* Declaration: declare result */
+    TAC_GOTO,    /* Unconditional jump to label */
+    TAC_IF_FALSE, /* Conditional jump if arg1 is false */
+    TAC_LABEL    /* Label definition */
 } TACOp;
 
 /* TAC INSTRUCTION STRUCTURE */
@@ -31,6 +34,7 @@ typedef struct {
     TACInstr* head;    /* First instruction */
     TACInstr* tail;    /* Last instruction (for efficient append) */
     int tempCount;     /* Counter for temporary variables (t0, t1, ...) */
+    int labelCount;    /* Global label counter for generating unique labels */ 
 } TACList;
 
 /* TAC GENERATION FUNCTIONS */
@@ -45,5 +49,6 @@ char* generateTACExpr(ASTNode* node);                             /* Generate TA
 void printTAC();                                                   /* Display unoptimized TAC */
 void optimizeTAC();                                                /* Apply optimizations */
 void printOptimizedTAC();                                          /* Display optimized TAC */
+char* newLabel(); /* Function to create a new label */
 
 #endif
