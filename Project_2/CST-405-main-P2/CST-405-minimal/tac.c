@@ -3,6 +3,7 @@
 #include <string.h>
 #include <ctype.h>
 #include "tac.h"
+#include "ast.h"
 
 TACList tacList;
 TACList optimizedList;

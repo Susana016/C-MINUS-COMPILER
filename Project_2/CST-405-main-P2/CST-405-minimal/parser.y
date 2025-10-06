@@ -141,9 +141,10 @@ expr:
         /* Block of statements */
         $$ = $2;
     }
-    | LBRACKET expr RBRACKET { 
-        /* Array access expression */
-        $$ = createArrayAccess($2);
+    | ID LBRACKET expr RBRACKET {
+        /* Array access: name[index] */
+        $$ = createArrayAccess($1, $3);
+        free($1);
     }
     ;
 

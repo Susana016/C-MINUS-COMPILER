@@ -77,10 +77,10 @@ ASTNode* createArrayDecl(char* name, int size) {
 
 /* Create an array access node */
 ASTNode* createArrayAccess(char* name, ASTNode* index) {
-    ASTNode* node = malloc(sizeof(ASTNode));
+    ASTNode* node = (ASTNode*)malloc(sizeof(ASTNode));
     node->type = NODE_ARRAY_ACCESS;
-    node->data.array_access.name = strdup(name);
-    node->data.array_access.index = index;
+    node->data.arrayaccess.name = strdup(name);
+    node->data.arrayaccess.index = index;
     return node;
 }
 
@@ -172,10 +172,6 @@ void printAST(ASTNode* node, int level) {
             printf("DECL_INIT: %s\n", node->data.decl_init.name);
             printAST(node->data.decl_init.value, level + 1);
             break;
-        case NODE_DECL_INIT:
-            printf("DECL_INIT: %s\n", node->data.decl_init.name);
-            printAST(node->data.decl_init.value, level + 1);
-            break;
         case NODE_ASSIGN:
             printf("ASSIGN: %s\n", node->data.assign.var);
             printAST(node->data.assign.value, level + 1);
@@ -188,8 +184,9 @@ void printAST(ASTNode* node, int level) {
             printf("ARRAY_DECL: %s[%d]\n", node->data.array_decl.name, node->data.array_decl.size);
             break;
         case NODE_ARRAY_ACCESS:
-            printf("ARRAY_ACCESS: %s\n", node->data.array_access.name);
-            printAST(node->data.array_access.index, level + 1);
+            printIndent(level);
+            printf("ARRAY_ACCESS: %s\n", node->data.arrayaccess.name);
+            printAST(node->data.arrayaccess.index, level + 1);
             break;
         case NODE_ARRAY_ASSIGN:
             printf("ARRAY_ASSIGN: %s\n", node->data.array_assign.name);

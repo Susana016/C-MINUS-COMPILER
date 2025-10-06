@@ -1,58 +1,120 @@
-#ifndef TAC_H
-#define TAC_H
+#ifndef AST_H
+#define AST_H
 
-#include "ast.h"
+#include <stdio.h>
 
-/* THREE-ADDRESS CODE (TAC)
- * Intermediate representation between AST and machine code
- * Each instruction has at most 3 operands (result = arg1 op arg2)
- * Makes optimization and code generation easier
- */
-
-/* TAC INSTRUCTION TYPES */
 typedef enum {
-    TAC_ADD,     /* Addition: result = arg1 + arg2 */
-    TAC_SUB,     /* Subtraction: result = arg1 - arg2 */
-    TAC_MUL,     /* Multiplication: result = arg1 * arg2 */
-    TAC_DIV,     /* Division: result = arg1 / arg2 */
-    TAC_ASSIGN,  /* Assignment: result = arg1 */
-    TAC_PRINT,   /* Print: print(arg1) */
-    TAC_DECL,    /* Declaration: declare result */
-    TAC_GOTO,    /* Unconditional jump to label */
-    TAC_IF_FALSE, /* Conditional jump if arg1 is false */
-    TAC_LABEL,    /* Label definition */
-    TAC_ARRAY_ACCESS /* Array access: result = array[arg1] */
-} TACOp;
+    NODE_NUM,
+    NODE_FLOAT_NUM,
+    NODE_VAR,
+    NODE_BINOP,
+    NODE_ASSIGN,
+    NODE_DECL,
+    NODE_DECL_DOUBLE,
+    NODE_PRINT,
+    NODE_STMT_LIST,
+    NODE_ARRAY_DECL,
+    NODE_ARRAY_ASSIGN,
+    NODE_ARRAY_ACCESS,
+    NODE_ARRAY_2D_DECL,
+    NODE_ARRAY_2D_ASSIGN,
+    NODE_ARRAY_2D_ACCESS
+} NodeType;
 
-/* TAC INSTRUCTION STRUCTURE */
-typedef struct TACInstr {
-    TACOp op;               /* Operation type */
-    char* arg1;             /* First operand (if needed) */
-    char* arg2;             /* Second operand (for binary ops) */
-    char* result;           /* Result/destination */
-    struct TACInstr* next;  /* Linked list pointer */
-} TACInstr;
+typedef struct ASTNode {
+    NodeType type;
+    union {
+        /* Integer literal */
+        int num;
 
-/* TAC LIST MANAGEMENT */
-typedef struct {
-    TACInstr* head;    /* First instruction */
-    TACInstr* tail;    /* Last instruction (for efficient append) */
-    int tempCount;     /* Counter for temporary variables (t0, t1, ...) */
-    int labelCount;    /* Global label counter for generating unique labels */ 
-} TACList;
+        /* Floating-point literal */
+        double fnum;
 
-/* TAC GENERATION FUNCTIONS */
-void initTAC();                                                    /* Initialize TAC lists */
-char* newTemp();                                                   /* Generate new temp variable */
-TACInstr* createTAC(TACOp op, char* arg1, char* arg2, char* result); /* Create TAC instruction */
-void appendTAC(TACInstr* instr);                                  /* Add instruction to list */
-void generateTAC(ASTNode* node);                                  /* Convert AST to TAC */
-char* generateTACExpr(ASTNode* node);                             /* Generate TAC for expression */
+        /* Variable name */
+        char* name;
 
-/* TAC OPTIMIZATION AND OUTPUT */
-void printTAC();                                                   /* Display unoptimized TAC */
-void optimizeTAC();                                                /* Apply optimizations */
-void printOptimizedTAC();                                          /* Display optimized TAC */
-char* newLabel(); /* Function to create a new label */
+        /* Binary operator */
+        struct {
+            char op;
+            struct ASTNode* left;
+            struct ASTNode* right;
+        } binop;
+
+        /* Assignment: var = value */
+        struct {
+            char* var;
+            struct ASTNode* value;
+        } assign;
+
+        /* Print statement */
+        struct {
+            struct ASTNode* expr;
+        } print;
+
+        /* Statement list: stmt; next */
+        struct {
+            struct ASTNode* stmt;
+            struct ASTNode* next;
+        } stmtlist;
+
+        /* Array declaration */
+        struct {
+            char* name;
+            int size;
+        } array_decl;
+
+        /* Array assignment: arr[index] = value */
+        struct {
+            char* name;
+            struct ASTNode* index;
+            struct ASTNode* value;
+        } array_assign;
+
+        /* Array access: arr[index] */
+        struct {
+            char* name;
+            struct ASTNode* index;
+        } array_access;
+
+        /* 2D array declaration */
+        struct {
+            char* name;
+            int rows;
+            int cols;
+        } array_2d_decl;
+
+        /* 2D array assignment: arr[row][col] = value */
+        struct {
+            char* name;
+            struct ASTNode* row;
+            struct ASTNode* col;
+            struct ASTNode* value;
+        } array_2d_assign;
+
+        /* 2D array access: arr[row][col] */
+        struct {
+            char* name;
+            struct ASTNode* row;
+            struct ASTNode* col;
+        } array_2d_access;
+
+    } data;
+} ASTNode;
+
+/* Function prototypes */
+ASTNode* createNumNode(int value);
+ASTNode* createFloatNode(double value);
+ASTNode* createVarNode(char* name);
+ASTNode* createBinOpNode(char op, ASTNode* left, ASTNode* right);
+ASTNode* createAssignNode(char* var, ASTNode* value);
+ASTNode* createPrintNode(ASTNode* expr);
+ASTNode* createStmtListNode(ASTNode* stmt, ASTNode* next);
+ASTNode* createArrayDecl(char* name, int size);
+ASTNode* createArrayAssign(char* name, ASTNode* index, ASTNode* value);
+ASTNode* createArrayAccess(char* name, ASTNode* index);
+ASTNode* createArray2DDecl(char* name, int rows, int cols);
+ASTNode* createArray2DAssign(char* name, ASTNode* row, ASTNode* col, ASTNode* value);
+ASTNode* createArray2DAccess(char* name, ASTNode* row, ASTNode* col);
+void printAST(ASTNode* node, int level);
 
 #endif
