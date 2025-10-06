@@ -70,3 +70,22 @@ int addArray(char* name, int size) {
 
     return symtab.vars[symtab.count - 1].offset;
 }
+
+int addArray2D(char* name, int rows, int cols) {
+    if (isVarDeclared(name)) {
+        return -1;  // Error: already exists
+    }
+
+    symtab.vars[symtab.count].name = strdup(name);
+    symtab.vars[symtab.count].offset = symtab.nextOffset;
+    symtab.vars[symtab.count].size = rows * cols;  // Total elements
+    symtab.vars[symtab.count].isArray = 1;
+    symtab.vars[symtab.count].rows = rows;
+    symtab.vars[symtab.count].cols = cols;
+
+    // Reserve rows * cols * 4 bytes on stack
+    symtab.nextOffset += rows * cols * 4;
+    symtab.count++;
+
+    return symtab.vars[symtab.count - 1].offset;
+}

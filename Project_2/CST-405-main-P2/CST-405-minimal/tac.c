@@ -85,6 +85,22 @@ char* generateTACExpr(ASTNode* node) {
             free(arrayRef);
             return temp;
         }
+
+        case NODE_ARRAY_2D_ACCESS: {
+            char* rowExpr = generateTACExpr(node->data.array_2d_access.row);
+            char* colExpr = generateTACExpr(node->data.array_2d_access.col);
+            char* temp = newTemp();
+            
+            // Create a string like "matrix[t0][t1]"
+            char* arrayRef = malloc(strlen(node->data.array_2d_access.name) + 
+                                   strlen(rowExpr) + strlen(colExpr) + 20);
+            sprintf(arrayRef, "%s[%s][%s]", node->data.array_2d_access.name, 
+                    rowExpr, colExpr);
+            
+            appendTAC(createTAC(TAC_ASSIGN, arrayRef, NULL, temp));
+            free(arrayRef);
+            return temp;
+        }
         
         default:
             return NULL;
@@ -129,6 +145,27 @@ void generateTAC(ASTNode* node) {
             // Create a string like "arr[t0]"
             char* arrayRef = malloc(strlen(node->data.array_assign.name) + strlen(indexExpr) + 10);
             sprintf(arrayRef, "%s[%s]", node->data.array_assign.name, indexExpr);
+            
+            appendTAC(createTAC(TAC_ASSIGN, valueExpr, NULL, arrayRef));
+            free(arrayRef);
+            break;
+        }
+
+        case NODE_ARRAY_2D_DECL:
+            appendTAC(createTAC(TAC_DECL, NULL, NULL, node->data.array_2d_decl.name));
+            break;
+        
+        case NODE_ARRAY_2D_ASSIGN: {
+            // Generate: matrix[row][col] = value
+            char* rowExpr = generateTACExpr(node->data.array_2d_assign.row);
+            char* colExpr = generateTACExpr(node->data.array_2d_assign.col);
+            char* valueExpr = generateTACExpr(node->data.array_2d_assign.value);
+            
+            // Create a string like "matrix[t0][t1]"
+            char* arrayRef = malloc(strlen(node->data.array_2d_assign.name) + 
+                                   strlen(rowExpr) + strlen(colExpr) + 20);
+            sprintf(arrayRef, "%s[%s][%s]", node->data.array_2d_assign.name, 
+                    rowExpr, colExpr);
             
             appendTAC(createTAC(TAC_ASSIGN, valueExpr, NULL, arrayRef));
             free(arrayRef);

@@ -86,6 +86,44 @@ void genExpr(ASTNode* node) {
             tempReg = indexReg + 1;
             break;
         }
+
+        case NODE_ARRAY_2D_ACCESS: {
+            int offset = getVarOffset(node->data.array_2d_access.name);
+            if (offset == -1) {
+                fprintf(stderr, "Error: 2D Array %s not declared\n", node->data.array_2d_access.name);
+                exit(1);
+            }
+            genExpr(node->data.array_2d_access.row);
+            int rowReg = tempReg - 1;
+            
+            genExpr(node->data.array_2d_access.col);
+            int colReg = tempReg - 1;
+            
+            // Assuming fixed number of columns for simplicity, e.g., 10
+            int numCols = 10; // This should ideally come from symbol table
+            
+            // Calculate linear index: index = row * numCols + col
+            fprintf(output, "    li $t%d, %d          # Load number of columns\n", getNextTemp(), numCols);
+            int colsReg = tempReg - 1;
+            
+            fprintf(output, "    mul $t%d, $t%d, $t%d # row * numCols\n", rowReg, rowReg, colsReg);
+            fprintf(output, "    add $t%d, $t%d, $t%d # (row * numCols) + col\n", rowReg, rowReg, colReg);
+            
+            // Multiply index by 4 (word size)
+            fprintf(output, "    sll $t%d, $t%d, 2    # index * 4\n", rowReg, rowReg);
+            
+            // Add base address offset
+            fprintf(output, "    addi $t%d, $sp, %d   # base address\n", getNextTemp(), offset);
+            int baseReg = tempReg - 1;
+            
+            // Add index offset to base
+            fprintf(output, "    add $t%d, $t%d, $t%d # base + index*4\n", baseReg, baseReg, rowReg);
+            
+            // Load value from memory
+            fprintf(output, "    lw $t%d, 0($t%d)     # load array[row][col]\n", rowReg, baseReg);
+            tempReg = rowReg + 1;
+            break;
+        }
             
         default:
             break;
@@ -164,6 +202,63 @@ void genStmt(ASTNode* node) {
             fprintf(output, "    sw $t%d, 0($t%d)     # store to array[index]\n", valueReg, baseReg);
             tempReg = 0;
             break;
+        }
+
+        case NODE_ARRAY_2D_DECL: {
+            int offset = addArray2D(node->data.array_2d_decl.name, node->data.array_2d_decl.rows, node->data.array_2d_decl.cols);
+            if (offset == -1) {
+                fprintf(stderr, "Error: 2D Array %s already declared\n", node->data.array_2d_decl.name);
+                exit(1);
+            }
+            fprintf(output, "    # Declared 2D array %s of size %dx%d at offset %d\n", 
+                    node->data.array_2d_decl.name, node->data.array_2d_decl.rows, node->data.array_2d_decl.cols, offset);
+            break;
+        }
+
+        case NODE_ARRAY_2D_ASSIGN: {
+            // Get 2D array base address
+            int offset = getVarOffset(node->data.array_2d_assign.name);
+            if (offset == -1) {
+                fprintf(stderr, "Error: 2D Array %s not declared\n", node->data.array_2d_assign.name);
+                exit(1);
+            }
+            
+            // Calculate row index
+            genExpr(node->data.array_2d_assign.row);
+            int rowReg = tempReg - 1;
+            
+            // Calculate column index
+            genExpr(node->data.array_2d_assign.col);
+            int colReg = tempReg - 1;
+            
+            // Calculate value to store
+            genExpr(node->data.array_2d_assign.value);
+            int valueReg = tempReg - 1;
+            
+            // Assuming fixed number of columns for simplicity, e.g., 10
+            int numCols = 10; // This should ideally come from symbol table
+            
+            // Calculate linear index: index = row * numCols + col
+            fprintf(output, "    li $t%d, %d          # Load number of columns\n", getNextTemp(), numCols);
+            int colsReg = tempReg - 1;
+            
+            fprintf(output, "    mul $t%d, $t%d, $t%d # row * numCols\n", rowReg, rowReg, colsReg);
+            fprintf(output, "    add $t%d, $t%d, $t%d # (row * numCols) + col\n", rowReg, rowReg, colReg);
+            
+            // Multiply index by 4 (word size)
+            fprintf(output, "    sll $t%d, $t%d, 2    # index * 4\n", rowReg, rowReg);
+            
+            // Add base address offset
+            fprintf(output, "    addi $t%d, $sp, %d   # base address\n", getNextTemp(), offset);
+            int baseReg = tempReg - 1;
+            
+            // Add index offset to base
+            fprintf(output, "    add $t%d, $t%d, $t%d # base + index*4\n", baseReg, baseReg, rowReg);
+            
+            // Store value to memory
+            fprintf(output, "    sw $t%d, 0($t%d)     # store to array[row][col]\n", valueReg, baseReg);
+            tempReg = 0;
+            break;      
         }
         
         case NODE_ASSIGN: {
