@@ -15,6 +15,14 @@ ASTNode* createNum(int value) {
     return node;
 }
 
+/* Create a floating-point literal node */
+ASTNode* createFloatNum(double value) {
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_FLOAT_NUM;
+    node->data.fnum = value;  /* Store the double value */
+    return node;
+}
+
 /* Create a variable reference node */
 ASTNode* createVar(char* name) {
     ASTNode* node = malloc(sizeof(ASTNode));
@@ -37,6 +45,14 @@ ASTNode* createBinOp(char op, ASTNode* left, ASTNode* right) {
 ASTNode* createDecl(char* name) {
     ASTNode* node = malloc(sizeof(ASTNode));
     node->type = NODE_DECL;
+    node->data.name = strdup(name);  /* Store variable name */
+    return node;
+}
+
+/* Create a double variable declaration node */
+ASTNode* createDeclDouble(char* name) {
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_DECL_DOUBLE;
     node->data.name = strdup(name);  /* Store variable name */
     return node;
 }
@@ -135,6 +151,9 @@ void printAST(ASTNode* node, int level) {
         case NODE_NUM:
             printf("NUM: %d\n", node->data.num);
             break;
+        case NODE_FLOAT_NUM:
+            printf("FLOAT_NUM: %.2f\n", node->data.fnum);
+            break;
         case NODE_VAR:
             printf("VAR: %s\n", node->data.name);
             break;
@@ -144,7 +163,14 @@ void printAST(ASTNode* node, int level) {
             printAST(node->data.binop.right, level + 1);
             break;
         case NODE_DECL:
-            printf("DECL: %s\n", node->data.name);
+            printf("DECL (int): %s\n", node->data.name);
+            break;
+        case NODE_DECL_DOUBLE:
+            printf("DECL (double): %s\n", node->data.name);
+            break;
+        case NODE_DECL_INIT:
+            printf("DECL_INIT: %s\n", node->data.decl_init.name);
+            printAST(node->data.decl_init.value, level + 1);
             break;
         case NODE_DECL_INIT:
             printf("DECL_INIT: %s\n", node->data.decl_init.name);

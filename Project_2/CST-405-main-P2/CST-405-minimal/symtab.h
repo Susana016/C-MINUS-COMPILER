@@ -9,14 +9,17 @@
 
 #define MAX_VARS 100  /* Maximum number of variables supported */
 
+/* Variable type enumeration */
+typedef enum {
+    TYPE_INT,
+    TYPE_DOUBLE
+} VarType;
+
 /* SYMBOL ENTRY - Information about each variable */
 typedef struct {
     char* name;     /* Variable identifier */
     int offset;     /* Stack offset in bytes (for MIPS stack frame) */
-    int size;       /* Size in number of elements (1 for scalar, >1 for array) */
-    int isArray;  // flag: 0 = scalar, 1 = array
-    int rows;   // for 2D arrays
-    int cols;   // for 2D arrays
+    VarType type;   /* Variable type (int or double) */
 } Symbol;
 
 /* SYMBOL TABLE STRUCTURE */
@@ -28,11 +31,9 @@ typedef struct {
 
 /* SYMBOL TABLE OPERATIONS */
 void initSymTab();               /* Initialize empty symbol table */
-int addVar(char* name);          /* Add new variable, returns offset or -1 if duplicate */
+int addVar(char* name, VarType type);  /* Add new variable with type, returns offset or -1 if duplicate */
 int getVarOffset(char* name);    /* Get stack offset for variable, -1 if not found */
+VarType getVarType(char* name);  /* Get variable type */
 int isVarDeclared(char* name);   /* Check if variable exists (1=yes, 0=no) */
-int isArrayVar(const char* name);  /* 1 = array, 0 = scalar, -1 = not found */
-int addArray(char* name, int size); /* Add new array, returns offset or -1 if duplicate */
-int addArray2D(char* name, int rows, int cols); /* Add new 2D array, returns offset or -1 if duplicate */
 
 #endif

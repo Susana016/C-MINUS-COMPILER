@@ -15,11 +15,17 @@
 %%
 
 "int"           { return INT; }
+"double"        { return DOUBLE; }
 "print"         { return PRINT; }
 
 [a-zA-Z_][a-zA-Z0-9_]* { 
     yylval.str = strdup(yytext);
     return ID; 
+}
+
+[0-9]+\.[0-9]+  { 
+    yylval.fnum = atof(yytext);
+    return FLOAT_NUM; 
 }
 
 [0-9]+          { 
@@ -29,6 +35,9 @@
 
 
 "+"             { return '+'; }
+"-"             { return '-'; }
+"*"             { return '*'; }
+"/"             { return '/'; }
 "="             { return '='; }
 ";"             { return ';'; }
 "("             { return LPAREN; }  

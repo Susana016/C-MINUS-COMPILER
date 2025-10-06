@@ -24,21 +24,24 @@ ASTNode* root = NULL;          /* Root of the Abstract Syntax Tree */
  */
 %union {
     int num;                /* For integer literals */
+    double fnum;            /* For floating-point literals */
     char* str;              /* For identifiers */
     struct ASTNode* node;   /* For AST nodes */
 }
 
 /* TOKEN DECLARATIONS with their semantic value types */
 %token <num> NUM              /* Number token carries an integer value */
+%token <fnum> FLOAT_NUM       /* Floating-point number token */
 %token <str> ID               /* Identifier token carries a string */
-%token INT PRINT /* IF ELSE */ /* Keywords have no semantic value; IF/ELSE disabled */
-%token LPAREN RPAREN LBRACKET RBRACKET LBRACE RBRACE
+%token INT DOUBLE PRINT /* IF ELSE */ /* Keywords have no semantic value; IF/ELSE disabled */
+%token LBRACE RBRACE LPAREN RPAREN LBRACKET RBRACKET/* Braces and parentheses */
 
 /* NON-TERMINAL TYPES - Define what type each grammar rule returns */
-%type <node> program stmt_list stmt decl assign expr print_stmt 
+%type <node> program stmt_list stmt decl assign expr print_stmt /* if_stmt if_else_stmt disabled */
 
 /* OPERATOR PRECEDENCE AND ASSOCIATIVITY */
-%left '+'  /* Addition is left-associative: a+b+c = (a+b)+c */
+%left '+' '-'  /* Addition and subtraction (lowest precedence) */
+%left '*' '/'  /* Multiplication and division (higher precedence) */
 
 %%
 
@@ -71,29 +74,22 @@ stmt:
     | print_stmt /* Print statement */
     ;
 
-/* DECLARATION RULE - "int x;" */
+/* DECLARATION RULE - "int x;" or "double x;" */
 decl:
     INT ID ';' { 
-        /* Create declaration node and free the identifier string */
-        $$ = createDecl($2);  /* $2 is the ID token's string value */
-        free($2);             /* Free the string copy from scanner */
-    }
-    | INT ID '=' expr ';' {
-        /* Declaration with initialization: int x = 5; */
-        ASTNode* decl = createDecl($2);
-        ASTNode* assign = createAssign($2, $4);
-        $$ = createStmtList(decl, assign);
+        /* Create integer declaration node */
+        $$ = createDecl($2);
         free($2);
     }
-    | INT ID LBRACKET NUM RBRACKET ';' { 
-        /* 1D Array declaration (e.g., int arr[10];) */
-        $$ = createArrayDecl($2, $4);  /* $2 = ID, $4 = NUM size */
-        free($2);                      /* Free the identifier string */
+    | DOUBLE ID ';' { 
+        /* Create double declaration node */
+        $$ = createDeclDouble($2);
+        free($2);
     }
-    | INT ID LBRACKET NUM RBRACKET LBRACKET NUM RBRACKET ';' { 
-        /* 2D Array declaration (e.g., int matrix[3][4];) */
-        $$ = createArray2DDecl($2, $4, $7);  /* $2=ID, $4=rows, $7=cols */
-        free($2);                            /* Free the identifier string */
+    | INT ID LBRACKET NUM RBRACKET ';' {
+        /* Simple array declaration */
+        $$ = createDecl($2);
+        free($2);
     }
     ;
 
@@ -104,42 +100,50 @@ assign:
         $$ = createAssign($1, $3);  /* $1 = ID, $3 = expr */
         free($1);                   /* Free the identifier string */
     }
-    | ID LBRACKET expr RBRACKET '=' expr ';' { 
-        /* 1D Array element assignment (e.g., arr[2] = expr;) */
-        $$ = createArrayAssign($1, $3, $6);  /* $1=ID, $3=index expr, $6=value expr */
-        free($1);                            /* Free the identifier string */
-    }
-    | ID LBRACKET expr RBRACKET LBRACKET expr RBRACKET '=' expr ';' { 
-        /* 2D Array element assignment (e.g., matrix[1][2] = expr;) */
-        $$ = createArray2DAssign($1, $3, $6, $9);  /* $1=ID, $3=row, $6=col, $9=value */
-        free($1);                                  /* Free the identifier string */
-    }
     ;
 
 /* EXPRESSION RULES - Build expression trees */
 expr:
     NUM { 
-        /* Literal number */
-        $$ = createNum($1);  /* Create leaf node with number value */
+        /* Integer literal */
+        $$ = createNum($1);
+    }
+    | FLOAT_NUM {
+        /* Floating-point literal */
+        $$ = createFloatNum($1);
     }
     | ID { 
         /* Variable reference */
-        $$ = createVar($1);  /* Create leaf node with variable name */
-        free($1);            /* Free the identifier string */
+        $$ = createVar($1);
+        free($1);
     }
     | expr '+' expr { 
-        /* Addition operation - builds binary tree */
-        $$ = createBinOp('+', $1, $3);  /* Left child, op, right child */
+        /* Addition operation */
+        $$ = createBinOp('+', $1, $3);
     }
-    | ID LBRACKET expr RBRACKET { 
-        /* 1D Array element access (e.g., arr[2]) */
-        $$ = createArrayAccess($1, $3);  /* $1=ID, $3=index expr */
-        free($1);                        /* Free the identifier string */
+    | expr '-' expr { 
+        /* Subtraction operation */
+        $$ = createBinOp('-', $1, $3);
     }
-    | ID LBRACKET expr RBRACKET LBRACKET expr RBRACKET { 
-        /* 2D Array element access (e.g., matrix[1][2]) */
-        $$ = createArray2DAccess($1, $3, $6);  /* $1=ID, $3=row, $6=col */
-        free($1);                              /* Free the identifier string */
+    | expr '*' expr { 
+        /* Multiplication operation */
+        $$ = createBinOp('*', $1, $3);
+    }
+    | expr '/' expr { 
+        /* Division operation */
+        $$ = createBinOp('/', $1, $3);
+    }
+    | LPAREN expr RPAREN { 
+        /* Parenthesized expression */
+        $$ = $2;
+    }
+    | LBRACE stmt_list RBRACE { 
+        /* Block of statements */
+        $$ = $2;
+    }
+    | LBRACKET expr RBRACKET { 
+        /* Array access expression */
+        $$ = createArrayAccess($2);
     }
     ;
 
@@ -147,7 +151,7 @@ expr:
 print_stmt:
     PRINT LPAREN expr RPAREN ';' { 
         /* Create print node with expression to print */
-        $$ = createPrint($3);  /* $3 is the expression inside parens */
+        $$ = createPrint($3);
     }
     ;
 

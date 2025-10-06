@@ -69,6 +69,12 @@ char* generateTACExpr(ASTNode* node) {
             
             if (node->data.binop.op == '+') {
                 appendTAC(createTAC(TAC_ADD, left, right, temp));
+            } else if (node->data.binop.op == '-') {
+                appendTAC(createTAC(TAC_SUB, left, right, temp));
+            } else if (node->data.binop.op == '*') {
+                appendTAC(createTAC(TAC_MUL, left, right, temp));
+            } else if (node->data.binop.op == '/') {
+                appendTAC(createTAC(TAC_DIV, left, right, temp));
             }
             
             return temp;
@@ -125,6 +131,18 @@ void printTAC() {
                 printf("%s = %s + %s", curr->result, curr->arg1, curr->arg2);
                 printf("     // Add: store result in %s\n", curr->result);
                 break;
+            case TAC_SUB:
+                printf("%s = %s - %s", curr->result, curr->arg1, curr->arg2);
+                printf("     // Subtract: store result in %s\n", curr->result);
+                break;
+            case TAC_MUL:
+                printf("%s = %s * %s", curr->result, curr->arg1, curr->arg2);
+                printf("     // Multiply: store result in %s\n", curr->result);
+                break;
+            case TAC_DIV:
+                printf("%s = %s / %s", curr->result, curr->arg1, curr->arg2);
+                printf("     // Divide: store result in %s\n", curr->result);
+                break;
             case TAC_ASSIGN:
                 printf("%s = %s", curr->result, curr->arg1);
                 printf("           // Assign value to %s\n", curr->result);
@@ -161,7 +179,10 @@ void optimizeTAC() {
                 newInstr = createTAC(TAC_DECL, NULL, NULL, curr->result);
                 break;
                 
-            case TAC_ADD: {
+            case TAC_ADD:
+            case TAC_SUB:
+            case TAC_MUL:
+            case TAC_DIV: {
                 // Check if both operands are constants
                 char* left = curr->arg1;
                 char* right = curr->arg2;
@@ -182,7 +203,24 @@ void optimizeTAC() {
                 
                 // Constant folding
                 if (isdigit(left[0]) && isdigit(right[0])) {
-                    int result = atoi(left) + atoi(right);
+                    int leftVal = atoi(left);
+                    int rightVal = atoi(right);
+                    int result;
+                    
+                    switch(curr->op) {
+                        case TAC_ADD: result = leftVal + rightVal; break;
+                        case TAC_SUB: result = leftVal - rightVal; break;
+                        case TAC_MUL: result = leftVal * rightVal; break;
+                        case TAC_DIV: 
+                            if (rightVal == 0) {
+                                fprintf(stderr, "Error: Division by zero\n");
+                                exit(1);
+                            }
+                            result = leftVal / rightVal; 
+                            break;
+                        default: result = 0;
+                    }
+                    
                     char* resultStr = malloc(20);
                     sprintf(resultStr, "%d", result);
                     
@@ -193,7 +231,7 @@ void optimizeTAC() {
                     
                     newInstr = createTAC(TAC_ASSIGN, resultStr, NULL, curr->result);
                 } else {
-                    newInstr = createTAC(TAC_ADD, left, right, curr->result);
+                    newInstr = createTAC(curr->op, left, right, curr->result);
                 }
                 break;
             }
@@ -256,6 +294,18 @@ void printOptimizedTAC() {
             case TAC_ADD:
                 printf("%s = %s + %s", curr->result, curr->arg1, curr->arg2);
                 printf("     // Runtime addition needed\n");
+                break;
+            case TAC_SUB:
+                printf("%s = %s - %s", curr->result, curr->arg1, curr->arg2);
+                printf("     // Runtime subtraction needed\n");
+                break;
+            case TAC_MUL:
+                printf("%s = %s * %s", curr->result, curr->arg1, curr->arg2);
+                printf("     // Runtime multiplication needed\n");
+                break;
+            case TAC_DIV:
+                printf("%s = %s / %s", curr->result, curr->arg1, curr->arg2);
+                printf("     // Runtime division needed\n");
                 break;
             case TAC_ASSIGN:
                 printf("%s = %s", curr->result, curr->arg1);

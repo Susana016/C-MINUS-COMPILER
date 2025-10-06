@@ -18,7 +18,7 @@ void initSymTab() {
 }
 
 /* Add a new variable to the symbol table */
-int addVar(char* name) {
+int addVar(char* name, VarType type) {
     /* Check for duplicate declaration */
     if (isVarDeclared(name)) {
         return -1;  /* Error: variable already exists */
@@ -27,11 +27,14 @@ int addVar(char* name) {
     /* Add new symbol entry */
     symtab.vars[symtab.count].name = strdup(name);
     symtab.vars[symtab.count].offset = symtab.nextOffset;
-    symtab.vars[symtab.count].size = 1;
-    symtab.vars[symtab.count].isArray = 0;
+    symtab.vars[symtab.count].type = type;
     
-    /* Advance offset by 4 bytes (size of int in MIPS) */
-    symtab.nextOffset += 4;
+    /* Advance offset based on type (4 bytes for int, 8 bytes for double in MIPS) */
+    if (type == TYPE_DOUBLE) {
+        symtab.nextOffset += 8;
+    } else {
+        symtab.nextOffset += 4;
+    }
     symtab.count++;
     
     /* Return the offset for this variable */
@@ -49,43 +52,18 @@ int getVarOffset(char* name) {
     return -1;  /* Variable not found - semantic error */
 }
 
+/* Get a variable's type */
+VarType getVarType(char* name) {
+    /* Linear search through symbol table */
+    for (int i = 0; i < symtab.count; i++) {
+        if (strcmp(symtab.vars[i].name, name) == 0) {
+            return symtab.vars[i].type;  /* Found it */
+        }
+    }
+    return TYPE_INT;  /* Default to int if not found */
+}
+
 /* Check if a variable has been declared */
 int isVarDeclared(char* name) {
     return getVarOffset(name) != -1;  /* True if found, false otherwise */
-}
-
-int addArray(char* name, int size) {
-    if (isVarDeclared(name)) {
-        return -1;  // Error: already exists
-    }
-
-    symtab.vars[symtab.count].name = strdup(name);
-    symtab.vars[symtab.count].offset = symtab.nextOffset;
-    symtab.vars[symtab.count].size = size;
-    symtab.vars[symtab.count].isArray = 1;
-
-    // Reserve size * 4 bytes on stack
-    symtab.nextOffset += size * 4;
-    symtab.count++;
-
-    return symtab.vars[symtab.count - 1].offset;
-}
-
-int addArray2D(char* name, int rows, int cols) {
-    if (isVarDeclared(name)) {
-        return -1;  // Error: already exists
-    }
-
-    symtab.vars[symtab.count].name = strdup(name);
-    symtab.vars[symtab.count].offset = symtab.nextOffset;
-    symtab.vars[symtab.count].size = rows * cols;  // Total elements
-    symtab.vars[symtab.count].isArray = 1;
-    symtab.vars[symtab.count].rows = rows;
-    symtab.vars[symtab.count].cols = cols;
-
-    // Reserve rows * cols * 4 bytes on stack
-    symtab.nextOffset += rows * cols * 4;
-    symtab.count++;
-
-    return symtab.vars[symtab.count - 1].offset;
 }
