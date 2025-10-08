@@ -66,6 +66,15 @@ ASTNode* createAssign(char* var, ASTNode* value) {
     return node;
 }
 
+/* Create a declaration with initialization node */
+ASTNode* createDeclInit(char* name, ASTNode* value) {
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_DECL_INIT;
+    node->data.decl_init.name = strdup(name);
+    node->data.decl_init.value = value;
+    return node;
+}
+
 /* Create an array declaration node */
 ASTNode* createArrayDecl(char* name, int size) {
     ASTNode* node = malloc(sizeof(ASTNode));
@@ -111,6 +120,7 @@ ASTNode* createStmtList(ASTNode* stmt1, ASTNode* stmt2) {
     return node;
 }
 
+/* Create a 2D array declaration node */
 ASTNode* createArray2DDecl(char* name, int rows, int cols) {
     ASTNode* node = malloc(sizeof(ASTNode));
     node->type = NODE_ARRAY_2D_DECL;
@@ -120,6 +130,7 @@ ASTNode* createArray2DDecl(char* name, int rows, int cols) {
     return node;
 }
 
+/* Create a 2D array assignment node */
 ASTNode* createArray2DAssign(char* name, ASTNode* row, ASTNode* col, ASTNode* value) {
     ASTNode* node = malloc(sizeof(ASTNode));
     node->type = NODE_ARRAY_2D_ASSIGN;
@@ -130,6 +141,7 @@ ASTNode* createArray2DAssign(char* name, ASTNode* row, ASTNode* col, ASTNode* va
     return node;
 }
 
+/* Create a 2D array access node */
 ASTNode* createArray2DAccess(char* name, ASTNode* row, ASTNode* col) {
     ASTNode* node = malloc(sizeof(ASTNode));
     node->type = NODE_ARRAY_2D_ACCESS;
@@ -167,10 +179,6 @@ void printAST(ASTNode* node, int level) {
             break;
         case NODE_DECL_DOUBLE:
             printf("DECL (double): %s\n", node->data.name);
-            break;
-        case NODE_DECL_INIT:
-            printf("DECL_INIT: %s\n", node->data.decl_init.name);
-            printAST(node->data.decl_init.value, level + 1);
             break;
         case NODE_DECL_INIT:
             printf("DECL_INIT: %s\n", node->data.decl_init.name);

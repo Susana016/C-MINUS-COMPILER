@@ -74,7 +74,7 @@ stmt:
     | print_stmt /* Print statement */
     ;
 
-/* DECLARATION RULE - "int x;" or "double x;" */
+/* DECLARATION RULE - "int x;" or "double x;" or arrays */
 decl:
     INT ID ';' { 
         /* Create integer declaration node */
@@ -86,19 +86,39 @@ decl:
         $$ = createDeclDouble($2);
         free($2);
     }
+    | INT ID '=' expr ';' {
+        /* Declaration with initialization: int x = 5; */
+        $$ = createDeclInit($2, $4);
+        free($2);
+    }
     | INT ID LBRACKET NUM RBRACKET ';' {
-        /* Simple array declaration */
-        $$ = createDecl($2);
+        /* 1D Array declaration: int arr[3]; */
+        $$ = createArrayDecl($2, $4);
+        free($2);
+    }
+    | INT ID LBRACKET NUM RBRACKET LBRACKET NUM RBRACKET ';' {
+        /* 2D Array declaration: int matrix[2][2]; */
+        $$ = createArray2DDecl($2, $4, $7);
         free($2);
     }
     ;
 
-/* ASSIGNMENT RULE - "x = expr;" */
+/* ASSIGNMENT RULE - "x = expr;" or array assignments */
 assign:
     ID '=' expr ';' { 
-        /* Create assignment node with variable name and expression */
-        $$ = createAssign($1, $3);  /* $1 = ID, $3 = expr */
-        free($1);                   /* Free the identifier string */
+        /* Simple variable assignment: x = 10; */
+        $$ = createAssign($1, $3);
+        free($1);
+    }
+    | ID LBRACKET expr RBRACKET '=' expr ';' {
+        /* 1D Array assignment: arr[0] = 5; */
+        $$ = createArrayAssign($1, $3, $6);
+        free($1);
+    }
+    | ID LBRACKET expr RBRACKET LBRACKET expr RBRACKET '=' expr ';' {
+        /* 2D Array assignment: matrix[0][1] = 5; */
+        $$ = createArray2DAssign($1, $3, $6, $9);
+        free($1);
     }
     ;
 
@@ -141,9 +161,15 @@ expr:
         /* Block of statements */
         $$ = $2;
     }
-    | LBRACKET expr RBRACKET { 
-        /* Array access expression */
-        $$ = createArrayAccess($2);
+    | ID LBRACKET expr RBRACKET {
+        /* 1D Array access: arr[0] */
+        $$ = createArrayAccess($1, $3);
+        free($1);
+    }
+    | ID LBRACKET expr RBRACKET LBRACKET expr RBRACKET {
+        /* 2D Array access: matrix[0][1] */
+        $$ = createArray2DAccess($1, $3, $6);
+        free($1);
     }
     ;
 

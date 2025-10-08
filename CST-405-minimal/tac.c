@@ -148,11 +148,20 @@ void generateTAC(ASTNode* node) {
             generateTAC(node->data.stmtlist.next);
             break;
 
-        /* Handle array access expression */
+        /* Declaration with initialization */
+        case NODE_DECL_INIT: {
+            char* valueExpr = generateTACExpr(node->data.decl_init.value);
+            appendTAC(createTAC(TAC_DECL, NULL, NULL, node->data.decl_init.name));
+            appendTAC(createTAC(TAC_ASSIGN, valueExpr, NULL, node->data.decl_init.name));
+            break;
+        }
+
+        /* Array declaration */
         case NODE_ARRAY_DECL:
             appendTAC(createTAC(TAC_DECL, NULL, NULL, node->data.array_decl.name));
             break;
         
+        /* Array assignment */
         case NODE_ARRAY_ASSIGN: {
             // Generate: arr[index] = value
             char* indexExpr = generateTACExpr(node->data.array_assign.index);
@@ -167,10 +176,12 @@ void generateTAC(ASTNode* node) {
             break;
         }
 
+        /* 2D Array declaration */
         case NODE_ARRAY_2D_DECL:
             appendTAC(createTAC(TAC_DECL, NULL, NULL, node->data.array_2d_decl.name));
             break;
         
+        /* 2D Array assignment */
         case NODE_ARRAY_2D_ASSIGN: {
             // Generate: matrix[row][col] = value
             char* rowExpr = generateTACExpr(node->data.array_2d_assign.row);

@@ -9,16 +9,22 @@
 
 /* NODE TYPES - Different kinds of AST nodes in our language */
 typedef enum {
-    NODE_NUM,        /* Numeric literal (e.g., 42) */
-    NODE_FLOAT_NUM,  /* Floating-point literal (e.g., 3.14) */
-    NODE_VAR,        /* Variable reference (e.g., x) */
-    NODE_BINOP,      /* Binary operation (e.g., x + y) */
-    NODE_DECL,       /* Variable declaration (e.g., int x) */
-    NODE_DECL_DOUBLE,/* Double variable declaration (e.g., double x) */
-    NODE_ASSIGN,     /* Assignment statement (e.g., x = 10) */
-    NODE_PRINT,      /* Print statement (e.g., print(x)) */
-    NODE_STMT_LIST,  /* List of statements (program structure) */
-    NODE_ARRAY_ACCESS   /* Array access (e.g., arr[0]) */
+    NODE_NUM,            /* Numeric literal (e.g., 42) */
+    NODE_FLOAT_NUM,      /* Floating-point literal (e.g., 3.14) */
+    NODE_VAR,            /* Variable reference (e.g., x) */
+    NODE_BINOP,          /* Binary operation (e.g., x + y) */
+    NODE_DECL,           /* Variable declaration (e.g., int x) */
+    NODE_DECL_DOUBLE,    /* Double variable declaration (e.g., double x) */
+    NODE_DECL_INIT,      /* Declaration with initialization (e.g., int x = 5) */
+    NODE_ASSIGN,         /* Assignment statement (e.g., x = 10) */
+    NODE_PRINT,          /* Print statement (e.g., print(x)) */
+    NODE_STMT_LIST,      /* List of statements (program structure) */
+    NODE_ARRAY_DECL,     /* Array declaration (e.g., int arr[3]) */
+    NODE_ARRAY_ACCESS,   /* Array access (e.g., arr[0]) */
+    NODE_ARRAY_ASSIGN,   /* Array assignment (e.g., arr[0] = 5) */
+    NODE_ARRAY_2D_DECL,  /* 2D array declaration (e.g., int matrix[2][2]) */
+    NODE_ARRAY_2D_ACCESS,/* 2D array access (e.g., matrix[0][1]) */
+    NODE_ARRAY_2D_ASSIGN /* 2D array assignment (e.g., matrix[0][1] = 5) */
 } NodeType;
 
 /* AST NODE STRUCTURE
@@ -77,10 +83,52 @@ typedef struct ASTNode {
             struct ASTNode* elseBlock;  /* Else-block statements */
         } ifelsestmt;
 
+        /* Declaration with initialization (NODE_DECL_INIT) */
+        struct {
+            char* name;                 /* Variable name */
+            struct ASTNode* value;      /* Initial value expression */
+        } decl_init;
+
+        /* Array declaration (NODE_ARRAY_DECL) */
+        struct {
+            char* name;                 /* Array name */
+            int size;                   /* Array size */
+        } array_decl;
+
         /* Array access structure (NODE_ARRAY_ACCESS) */
         struct {
+            char* name;                 /* Array name */
             struct ASTNode* index;      /* Index expression */
-        } arrayaccess;
+        } array_access;
+
+        /* Array assignment (NODE_ARRAY_ASSIGN) */
+        struct {
+            char* name;                 /* Array name */
+            struct ASTNode* index;      /* Index expression */
+            struct ASTNode* value;      /* Value to assign */
+        } array_assign;
+
+        /* 2D Array declaration (NODE_ARRAY_2D_DECL) */
+        struct {
+            char* name;                 /* Array name */
+            int rows;                   /* Number of rows */
+            int cols;                   /* Number of columns */
+        } array_2d_decl;
+
+        /* 2D Array access (NODE_ARRAY_2D_ACCESS) */
+        struct {
+            char* name;                 /* Array name */
+            struct ASTNode* row;        /* Row index expression */
+            struct ASTNode* col;        /* Column index expression */
+        } array_2d_access;
+
+        /* 2D Array assignment (NODE_ARRAY_2D_ASSIGN) */
+        struct {
+            char* name;                 /* Array name */
+            struct ASTNode* row;        /* Row index expression */
+            struct ASTNode* col;        /* Column index expression */
+            struct ASTNode* value;      /* Value to assign */
+        } array_2d_assign;
     } data;
 } ASTNode;
 
@@ -97,10 +145,18 @@ ASTNode* createAssign(char* var, ASTNode* value);               /* Create assign
 ASTNode* createPrint(ASTNode* expr);                            /* Create print node */
 ASTNode* createStmtList(ASTNode* stmt1, ASTNode* stmt2);        /* Create statement list */
 
-/* -------- ADDITIONS PROJECT 2 --------
+/* Array-related functions */
+ASTNode* createDeclInit(char* name, ASTNode* value);                          /* Create declaration with init */
+ASTNode* createArrayDecl(char* name, int size);                                /* Create array declaration */
+ASTNode* createArrayAccess(char* name, ASTNode* index);                        /* Create array access node */
+ASTNode* createArrayAssign(char* name, ASTNode* index, ASTNode* value);       /* Create array assignment */
+ASTNode* createArray2DDecl(char* name, int rows, int cols);                    /* Create 2D array declaration */
+ASTNode* createArray2DAccess(char* name, ASTNode* row, ASTNode* col);         /* Create 2D array access */
+ASTNode* createArray2DAssign(char* name, ASTNode* row, ASTNode* col, ASTNode* value); /* Create 2D array assignment */
+
+/* -------- ADDITIONS PROJECT 2 (if/else disabled) --------
 ASTNode* createIf(ASTNode* condition, ASTNode* thenBlock);       Create if statement node 
 ASTNode* createIfElse(ASTNode* condition, ASTNode* thenBlock, ASTNode* elseBlock);  Create if-else statement node */
-ASTNode* createArrayAccess(ASTNode* index);                    /* Create array access node */
 
 /* AST DISPLAY FUNCTION */
 void printAST(ASTNode* node, int level);                        /* Pretty-print the AST */
