@@ -40,8 +40,8 @@ ASTNode* root = NULL;          /* Root of the Abstract Syntax Tree */
 %type <node> program stmt_list stmt decl assign expr print_stmt /* if_stmt if_else_stmt disabled */
 
 /* OPERATOR PRECEDENCE AND ASSOCIATIVITY */
-%left '+' '-'  /* Addition and subtraction (lowest precedence) */
-%left '*' '/'  /* Multiplication and division (higher precedence) */
+%left '+' '-'      /* Addition and subtraction (lowest precedence) */
+%left '*' '/' '%'  /* Multiplication, division, and modulo (higher precedence) */
 
 %%
 
@@ -152,6 +152,10 @@ expr:
     | expr '/' expr { 
         /* Division operation */
         $$ = createBinOp('/', $1, $3);
+    }
+    | expr '%' expr { 
+        /* Modulo operation */
+        $$ = createBinOp('%', $1, $3);
     }
     | LPAREN expr RPAREN { 
         /* Parenthesized expression */

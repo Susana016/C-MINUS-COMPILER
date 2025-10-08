@@ -55,6 +55,11 @@ void genExpr(ASTNode* node) {
                 case '/':
                     fprintf(output, "    div $t%d, $t%d, $t%d\n", leftReg, leftReg, rightReg);
                     break;
+                case '%':
+                    // Modulo: use div then mfhi to get remainder
+                    fprintf(output, "    div $t%d, $t%d\n", leftReg, rightReg);
+                    fprintf(output, "    mfhi $t%d\n", leftReg);  // Get remainder from HI register
+                    break;
             }
             
             tempReg = leftReg + 1;

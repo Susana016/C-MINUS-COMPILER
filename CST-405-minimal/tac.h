@@ -15,6 +15,7 @@ typedef enum {
     TAC_SUB,     /* Subtraction: result = arg1 - arg2 */
     TAC_MUL,     /* Multiplication: result = arg1 * arg2 */
     TAC_DIV,     /* Division: result = arg1 / arg2 */
+    TAC_MOD,     /* Modulo: result = arg1 % arg2 */
     TAC_ASSIGN,  /* Assignment: result = arg1 */
     TAC_PRINT,   /* Print: print(arg1) */
     TAC_DECL,    /* Declaration: declare result */

@@ -81,6 +81,8 @@ char* generateTACExpr(ASTNode* node) {
                 appendTAC(createTAC(TAC_MUL, left, right, temp));
             } else if (node->data.binop.op == '/') {
                 appendTAC(createTAC(TAC_DIV, left, right, temp));
+            } else if (node->data.binop.op == '%') {
+                appendTAC(createTAC(TAC_MOD, left, right, temp));
             }
             
             return temp;
@@ -232,6 +234,10 @@ void printTAC() {
                 printf("%s = %s / %s", curr->result, curr->arg1, curr->arg2);
                 printf("     // Divide: store result in %s\n", curr->result);
                 break;
+            case TAC_MOD:
+                printf("%s = %s %% %s", curr->result, curr->arg1, curr->arg2);
+                printf("     // Modulo: store result in %s\n", curr->result);
+                break;
             case TAC_ASSIGN:
                 printf("%s = %s", curr->result, curr->arg1);
                 printf("           // Assign value to %s\n", curr->result);
@@ -274,7 +280,8 @@ void optimizeTAC() {
             case TAC_ADD:
             case TAC_SUB:
             case TAC_MUL:
-            case TAC_DIV: {
+            case TAC_DIV:
+            case TAC_MOD: {
                 // Check if both operands are constants
                 char* left = curr->arg1;
                 char* right = curr->arg2;
@@ -315,6 +322,10 @@ void optimizeTAC() {
                                 }
                                 result = leftVal / rightVal;
                                 break;
+                            case TAC_MOD:
+                                fprintf(stderr, "Error: Modulo not supported for floating-point\n");
+                                exit(1);
+                                break;
                             default: result = 0.0;
                         }
                         
@@ -343,6 +354,13 @@ void optimizeTAC() {
                                     exit(1);
                                 }
                                 result = leftVal / rightVal;
+                                break;
+                            case TAC_MOD:
+                                if (rightVal == 0) {
+                                    fprintf(stderr, "Error: Modulo by zero\n");
+                                    exit(1);
+                                }
+                                result = leftVal % rightVal;
                                 break;
                             default: result = 0;
                         }
@@ -433,6 +451,10 @@ void printOptimizedTAC() {
             case TAC_DIV:
                 printf("%s = %s / %s", curr->result, curr->arg1, curr->arg2);
                 printf("     // Runtime division needed\n");
+                break;
+            case TAC_MOD:
+                printf("%s = %s %% %s", curr->result, curr->arg1, curr->arg2);
+                printf("     // Runtime modulo needed\n");
                 break;
             case TAC_ASSIGN:
                 printf("%s = %s", curr->result, curr->arg1);
