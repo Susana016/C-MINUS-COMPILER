@@ -17,6 +17,7 @@
 "int"           { return INT; }
 "double"        { return DOUBLE; }
 "print"         { return PRINT; }
+"while"         { return WHILE; }
 
 [a-zA-Z_][a-zA-Z0-9_]* { 
     yylval.str = strdup(yytext);
@@ -40,6 +41,8 @@
 "/"             { return '/'; }
 "%"             { return '%'; }
 "="             { return '='; }
+"<"             { return '<'; }
+">"             { return '>'; }
 ";"             { return ';'; }
 "("             { return LPAREN; }  
 ")"             { return RPAREN; }   

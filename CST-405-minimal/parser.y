@@ -33,15 +33,16 @@ ASTNode* root = NULL;          /* Root of the Abstract Syntax Tree */
 %token <num> NUM              /* Number token carries an integer value */
 %token <fnum> FLOAT_NUM       /* Floating-point number token */
 %token <str> ID               /* Identifier token carries a string */
-%token INT DOUBLE PRINT /* IF ELSE */ /* Keywords have no semantic value; IF/ELSE disabled */
+%token INT DOUBLE PRINT WHILE /* IF ELSE */ /* Keywords have no semantic value; IF/ELSE disabled */
 %token LBRACE RBRACE LPAREN RPAREN LBRACKET RBRACKET/* Braces and parentheses */
 
 /* NON-TERMINAL TYPES - Define what type each grammar rule returns */
-%type <node> program stmt_list stmt decl assign expr print_stmt /* if_stmt if_else_stmt disabled */
+%type <node> program stmt_list stmt decl assign expr print_stmt while_stmt /* if_stmt if_else_stmt disabled */
 
 /* OPERATOR PRECEDENCE AND ASSOCIATIVITY */
 %left '+' '-'      /* Addition and subtraction (lowest precedence) */
 %left '*' '/' '%'  /* Multiplication, division, and modulo (higher precedence) */
+%left '<' '>'      /* Relational operators */
 
 %%
 
@@ -72,6 +73,7 @@ stmt:
     decl        /* Variable declaration */
     | assign    /* Assignment statement */
     | print_stmt /* Print statement */
+    | while_stmt /* While loop */
     ;
 
 /* DECLARATION RULE - "int x;" or "double x;" or arrays */
@@ -157,6 +159,14 @@ expr:
         /* Modulo operation */
         $$ = createBinOp('%', $1, $3);
     }
+    | expr '<' expr {
+        /* Less-than comparison */
+        $$ = createBinOp('<', $1, $3);
+    }
+    | expr '>' expr {
+        /* Greater-than comparison */
+        $$ = createBinOp('>', $1, $3);
+    }
     | LPAREN expr RPAREN { 
         /* Parenthesized expression */
         $$ = $2;
@@ -182,6 +192,16 @@ print_stmt:
     PRINT LPAREN expr RPAREN ';' { 
         /* Create print node with expression to print */
         $$ = createPrint($3);
+    }
+    ;
+
+/* WHILE STATEMENT - "while (expr) stmt" or "while (expr) { stmt_list }" */
+while_stmt:
+    WHILE LPAREN expr RPAREN stmt {
+        $$ = createWhile($3, $5);
+    }
+    | WHILE LPAREN expr RPAREN LBRACE stmt_list RBRACE {
+        $$ = createWhile($3, $6);
     }
     ;
 

@@ -173,6 +173,23 @@ void genStmt(ASTNode* node) {
             genStmt(node->data.stmtlist.stmt);
             genStmt(node->data.stmtlist.next);
             break;
+
+        case NODE_WHILE: {
+            /* while (cond) body */
+            static int whileCounter = 0;
+            int id = whileCounter++;
+            fprintf(output, "Lwhile_%d:\n", id);
+            
+            genExpr(node->data.ifstmt.condition);
+            fprintf(output, "    # while condition result in $t%d\n", tempReg - 1);
+            fprintf(output, "    beq $t%d, $zero, Lend_while_%d\n", tempReg - 1, id);
+            tempReg = 0;
+            
+            genStmt(node->data.ifstmt.thenBlock);
+            fprintf(output, "    j Lwhile_%d\n", id);
+            fprintf(output, "Lend_while_%d:\n", id);
+            break;
+        }
         
         case NODE_DECL_INIT: {
             // Declaration with initialization: int x = 5;

@@ -24,7 +24,8 @@ typedef enum {
     NODE_ARRAY_ASSIGN,   /* Array assignment (e.g., arr[0] = 5) */
     NODE_ARRAY_2D_DECL,  /* 2D array declaration (e.g., int matrix[2][2]) */
     NODE_ARRAY_2D_ACCESS,/* 2D array access (e.g., matrix[0][1]) */
-    NODE_ARRAY_2D_ASSIGN /* 2D array assignment (e.g., matrix[0][1] = 5) */
+    NODE_ARRAY_2D_ASSIGN, /* 2D array assignment (e.g., matrix[0][1] = 5) */
+    NODE_WHILE          /* While loop node */
 } NodeType;
 
 /* AST NODE STRUCTURE
@@ -144,6 +145,7 @@ ASTNode* createDeclDouble(char* name);                           /* Create doubl
 ASTNode* createAssign(char* var, ASTNode* value);               /* Create assignment node */
 ASTNode* createPrint(ASTNode* expr);                            /* Create print node */
 ASTNode* createStmtList(ASTNode* stmt1, ASTNode* stmt2);        /* Create statement list */
+ASTNode* createWhile(ASTNode* condition, ASTNode* body);        /* Create while loop node */
 
 /* Array-related functions */
 ASTNode* createDeclInit(char* name, ASTNode* value);                          /* Create declaration with init */

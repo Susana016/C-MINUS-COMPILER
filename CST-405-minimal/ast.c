@@ -120,6 +120,15 @@ ASTNode* createStmtList(ASTNode* stmt1, ASTNode* stmt2) {
     return node;
 }
 
+/* Create a while loop node */
+ASTNode* createWhile(ASTNode* condition, ASTNode* body) {
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_WHILE;
+    node->data.ifstmt.condition = condition; /* reuse ifstmt struct for cond/body */
+    node->data.ifstmt.thenBlock = body;
+    return node;
+}
+
 /* Create a 2D array declaration node */
 ASTNode* createArray2DDecl(char* name, int rows, int cols) {
     ASTNode* node = malloc(sizeof(ASTNode));
@@ -225,6 +234,15 @@ void printAST(ASTNode* node, int level) {
             printf("ARRAY_2D_ACCESS: %s\n", node->data.array_2d_access.name);
             printAST(node->data.array_2d_access.row, level + 1);
             printAST(node->data.array_2d_access.col, level + 1);
+            break;
+        case NODE_WHILE:
+            printf("WHILE\n");
+            for (int i = 0; i < level + 1; i++) printf("  ");
+            printf("Condition:\n");
+            printAST(node->data.ifstmt.condition, level + 2);
+            for (int i = 0; i < level + 1; i++) printf("  ");
+            printf("Body:\n");
+            printAST(node->data.ifstmt.thenBlock, level + 2);
             break;
         default:
             printf("UNKNOWN NODE TYPE\n");      

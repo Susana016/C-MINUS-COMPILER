@@ -76,6 +76,8 @@ int main(int argc, char* argv[]) {
         printf("+------------------------------------------------------------+\n");
         optimizeTAC();
         printOptimizedTAC();
+    /* Free TAC memory allocated during generation/optimization */
+    freeTAC();
         printf("\n");
         
         /* PHASE 5: Code Generation */

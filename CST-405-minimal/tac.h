@@ -16,6 +16,8 @@ typedef enum {
     TAC_MUL,     /* Multiplication: result = arg1 * arg2 */
     TAC_DIV,     /* Division: result = arg1 / arg2 */
     TAC_MOD,     /* Modulo: result = arg1 % arg2 */
+    TAC_CMP_LT,  /* Comparison less-than: result = arg1 < arg2 (0/1) */
+    TAC_CMP_GT,  /* Comparison greater-than: result = arg1 > arg2 (0/1) */
     TAC_ASSIGN,  /* Assignment: result = arg1 */
     TAC_PRINT,   /* Print: print(arg1) */
     TAC_DECL,    /* Declaration: declare result */
@@ -49,6 +51,7 @@ TACInstr* createTAC(TACOp op, char* arg1, char* arg2, char* result); /* Create T
 void appendTAC(TACInstr* instr);                                  /* Add instruction to list */
 void generateTAC(ASTNode* node);                                  /* Convert AST to TAC */
 char* generateTACExpr(ASTNode* node);                             /* Generate TAC for expression */
+void freeTAC();                                                    /* Free TAC lists and strdup'd strings */
 
 /* TAC OPTIMIZATION AND OUTPUT */
 void printTAC();                                                   /* Display unoptimized TAC */

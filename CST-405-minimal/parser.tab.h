@@ -45,12 +45,13 @@
      INT = 261,
      DOUBLE = 262,
      PRINT = 263,
-     LBRACE = 264,
-     RBRACE = 265,
-     LPAREN = 266,
-     RPAREN = 267,
-     LBRACKET = 268,
-     RBRACKET = 269
+     WHILE = 264,
+     LBRACE = 265,
+     RBRACE = 266,
+     LPAREN = 267,
+     RPAREN = 268,
+     LBRACKET = 269,
+     RBRACKET = 270
    };
 #endif
 /* Tokens.  */
@@ -60,12 +61,13 @@
 #define INT 261
 #define DOUBLE 262
 #define PRINT 263
-#define LBRACE 264
-#define RBRACE 265
-#define LPAREN 266
-#define RPAREN 267
-#define LBRACKET 268
-#define RBRACKET 269
+#define WHILE 264
+#define LBRACE 265
+#define RBRACE 266
+#define LPAREN 267
+#define RPAREN 268
+#define LBRACKET 269
+#define RBRACKET 270
 
 
 
@@ -80,7 +82,7 @@ typedef union YYSTYPE
     struct ASTNode* node;   /* For AST nodes */
 }
 /* Line 1529 of yacc.c.  */
-#line 84 "parser.tab.h"
+#line 86 "parser.tab.h"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1
