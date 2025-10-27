@@ -39,6 +39,39 @@ getNumber:
     addi $sp, $sp, 408
     jr $ra
 
+# Function: testScope returns int
+testScope:
+    addi $sp, $sp, -408
+    sw $ra, 404($sp)
+    sw $fp, 400($sp)
+    move $fp, $sp
+    # Declared int gx at offset 0
+    li $t1, 100
+    sw $t1, 0($sp)
+    lw $t0, 0($sp)
+    move $v0, $t0
+    move $sp, $fp
+    lw $fp, 400($sp)
+    lw $ra, 404($sp)
+    addi $sp, $sp, 408
+    jr $ra
+
+# Function: addGlobals returns int
+addGlobals:
+    addi $sp, $sp, -408
+    sw $ra, 404($sp)
+    sw $fp, 400($sp)
+    move $fp, $sp
+    lw $t1, 0($s7)
+    lw $t2, 4($s7)
+    add $t1, $t1, $t2
+    move $v0, $t1
+    move $sp, $fp
+    lw $fp, 400($sp)
+    lw $ra, 404($sp)
+    addi $sp, $sp, 408
+    jr $ra
+
 # Function: main returns int
 _user_main:
     addi $sp, $sp, -408
@@ -46,10 +79,10 @@ _user_main:
     sw $fp, 400($sp)
     move $fp, $sp
     # Declared and initialized int sum at offset 0
-    lw $t1, 0($s7)
-    lw $t2, 4($s7)
-    add $t1, $t1, $t2
-    sw $t1, 0($sp)
+    lw $t2, 0($s7)
+    lw $t3, 4($s7)
+    add $t2, $t2, $t3
+    sw $t2, 0($sp)
     # Declared and initialized int diff at offset 4
     lw $t0, 0($s7)
     lw $t1, 4($s7)
@@ -348,6 +381,53 @@ Lfor_0:
     j Lfor_0
 Lend_for_0:
     lw $t0, 76($sp)
+    # Print integer
+    move $a0, $t0
+    li $v0, 1
+    syscall
+    # Print newline
+    li $v0, 11
+    li $a0, 10
+    syscall
+    # Declared and initialized int scopeTest at offset 84
+    jal testScope
+    move $t0, $v0
+    sw $t0, 84($sp)
+    lw $t0, 84($sp)
+    # Print integer
+    move $a0, $t0
+    li $v0, 1
+    syscall
+    # Print newline
+    li $v0, 11
+    li $a0, 10
+    syscall
+    # Declared and initialized int globalSum at offset 88
+    jal addGlobals
+    move $t0, $v0
+    sw $t0, 88($sp)
+    lw $t0, 88($sp)
+    # Print integer
+    move $a0, $t0
+    li $v0, 1
+    syscall
+    # Print newline
+    li $v0, 11
+    li $a0, 10
+    syscall
+    # Declared int localGx at offset 92
+    li $t0, 999
+    sw $t0, 92($sp)
+    lw $t0, 92($sp)
+    # Print integer
+    move $a0, $t0
+    li $v0, 1
+    syscall
+    # Print newline
+    li $v0, 11
+    li $a0, 10
+    syscall
+    lw $t0, 0($s7)
     # Print integer
     move $a0, $t0
     li $v0, 1

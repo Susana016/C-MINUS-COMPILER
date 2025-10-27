@@ -33,10 +33,10 @@ void genExpr(ASTNode* node) {
                 fprintf(stderr, "Error: Variable %s not declared\n", node->data.name);
                 exit(1);
             }
-            // Check if variable is in global scope
+            // Check if the symbol found is actually in global scope (not just same name)
             int isGlobal = 0;
             for (int i = 0; i < symtab.globalScope->count; i++) {
-                if (strcmp(symtab.globalScope->symbols[i].name, node->data.name) == 0) {
+                if (&symtab.globalScope->symbols[i] == sym) {
                     isGlobal = 1;
                     break;
                 }
@@ -191,10 +191,10 @@ void genStmt(ASTNode* node) {
                 exit(1);
             }
             genExpr(node->data.assign.value);
-            // Check if variable is in global scope
+            // Check if the symbol found is actually in global scope (not just same name)
             int isGlobal = 0;
             for (int i = 0; i < symtab.globalScope->count; i++) {
-                if (strcmp(symtab.globalScope->symbols[i].name, node->data.assign.var) == 0) {
+                if (&symtab.globalScope->symbols[i] == sym) {
                     isGlobal = 1;
                     break;
                 }

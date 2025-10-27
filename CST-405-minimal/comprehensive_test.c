@@ -7,6 +7,16 @@ int getNumber() {
     return result;
 }
 
+int testScope() {
+    int gx;
+    gx = 100;
+    return gx;
+}
+
+int addGlobals() {
+    return gx + gy;
+}
+
 int main() {
     int sum = gx + gy;
     int diff = gx - gy;
@@ -61,6 +71,17 @@ int main() {
         forSum = forSum + j;
     }
     print(forSum);
+
+    int scopeTest = testScope();
+    print(scopeTest);
+
+    int globalSum = addGlobals();
+    print(globalSum);
+
+    int localGx;
+    localGx = 999;
+    print(localGx);
+    print(gx);
 
     return 0;
 }
