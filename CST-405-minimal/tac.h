@@ -24,7 +24,12 @@ typedef enum {
     TAC_GOTO,    /* Unconditional jump to label */
     TAC_IF_FALSE, /* Conditional jump if arg1 is false */
     TAC_LABEL,    /* Label definition */
-    TAC_ARRAY_ACCESS /* Array access: result = array[arg1] */
+    TAC_ARRAY_ACCESS, /* Array access: result = array[arg1] */
+    TAC_PARAM,       /* Parameter passing: PARAM arg */
+    TAC_CALL,        /* Function call: result = CALL func_name, num_params */
+    TAC_RETURN,      /* Return: RETURN value */
+    TAC_FUNC_BEGIN,  /* Mark function start: FUNC_BEGIN name */
+    TAC_FUNC_END     /* Mark function end: FUNC_END name */
 } TACOp;
 
 /* TAC INSTRUCTION STRUCTURE */

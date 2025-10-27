@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(make clean:*)",
+      "Bash(make all:*)",
+      "Bash(minicompiler.exe test_operations.c output.s:*)",
+      "Bash(./minicompiler.exe:*)",
+      "Bash(gcc:*)",
+      "Bash(cat:*)",
+      "Bash(bison:*)",
+      "Bash(flex:*)",
+      "Bash(make:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

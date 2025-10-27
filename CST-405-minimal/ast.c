@@ -129,6 +129,17 @@ ASTNode* createWhile(ASTNode* condition, ASTNode* body) {
     return node;
 }
 
+/* Create a for loop node */
+ASTNode* createFor(ASTNode* init, ASTNode* condition, ASTNode* update, ASTNode* body) {
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_FOR;
+    node->data.forstmt.init = init;
+    node->data.forstmt.condition = condition;
+    node->data.forstmt.update = update;
+    node->data.forstmt.body = body;
+    return node;
+}
+
 /* Create a 2D array declaration node */
 ASTNode* createArray2DDecl(char* name, int rows, int cols) {
     ASTNode* node = malloc(sizeof(ASTNode));
@@ -159,6 +170,139 @@ ASTNode* createArray2DAccess(char* name, ASTNode* row, ASTNode* col) {
     node->data.array_2d_access.col = col;
     return node;
 }
+
+ASTNode* createFunction(char* name, char* returnType, ASTNode* params, ASTNode* body) {
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_FUNCTION;
+    node->data.function.name = strdup(name);
+    node->data.function.returnType = strdup(returnType);
+    node->data.function.params = params;
+    node->data.function.body = body;
+    return node;
+}
+
+ASTNode* createFunctionList(ASTNode* head, ASTNode* tail) {
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_FUNCTION_LIST;
+    node->data.funclist.head = head;
+    node->data.funclist.tail = tail;
+    return node;
+}
+
+ASTNode* createParameter(char* name, char* type, ASTNode* next) {
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_PARAMETER;
+    node->data.parameter.name = strdup(name);
+    node->data.parameter.type = strdup(type);
+    node->data.parameter.next = next;
+    return node;
+}
+ASTNode* createReturn(ASTNode* value) {
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_RETURN;
+    node->data.returnstmt.value = value;  /* Expression to return */
+    return node;
+}
+
+ASTNode* createCall(char* funcName, ASTNode* args) {
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_CALL;
+    node->data.call.funcName = strdup(funcName);  // Change: name → funcName
+    node->data.call.args = args;
+    return node;
+}
+
+ASTNode* createCallExpr(char* funcName, ASTNode* args) {
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_CALL_EXPR;
+    node->data.call_expr.funcName = strdup(funcName);  // Change: name → funcName
+    node->data.call_expr.args = args;
+    return node;
+}
+
+ASTNode* createProgram(ASTNode* globals, ASTNode* functions) {
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_PROGRAM;
+    node->data.program.globals = globals;
+    node->data.program.functions = functions;
+    return node;
+}
+
+ASTNode* createGlobalDecl(char* name) {
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_GLOBAL_DECL;
+    node->data.name = strdup(name);
+    return node;
+}
+
+ASTNode* createGlobalDeclDouble(char* name) {
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_GLOBAL_DECL_DOUBLE;
+    node->data.name = strdup(name);
+    return node;
+}
+
+ASTNode* createGlobalDeclInit(char* name, ASTNode* value) {
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_GLOBAL_DECL_INIT;
+    node->data.decl_init.name = strdup(name);
+    node->data.decl_init.value = value;
+    return node;
+}
+
+ASTNode* createGlobalArrayDecl(char* name, int size) {
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_GLOBAL_ARRAY_DECL;
+    node->data.array_decl.name = strdup(name);
+    node->data.array_decl.size = size;
+    return node;
+}
+
+ASTNode* createGlobalArray2DDecl(char* name, int rows, int cols) {
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_GLOBAL_ARRAY_2D_DECL;
+    node->data.array_2d_decl.name = strdup(name);
+    node->data.array_2d_decl.rows = rows;
+    node->data.array_2d_decl.cols = cols;
+    return node;
+}
+
+/* Create an if statement node (no else) */
+ASTNode* createIf(ASTNode* condition, ASTNode* thenBlock) {
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_IF;
+    node->data.ifstmt.condition = condition;
+    node->data.ifstmt.thenBlock = thenBlock;
+    node->data.ifstmt.elseBlock = NULL;
+    return node;
+}
+
+/* Create an if-else statement node */
+ASTNode* createIfElse(ASTNode* condition, ASTNode* thenBlock, ASTNode* elseBlock) {
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_IF_ELSE;
+    node->data.ifstmt.condition = condition;
+    node->data.ifstmt.thenBlock = thenBlock;
+    node->data.ifstmt.elseBlock = elseBlock;
+    return node;
+}
+
+/* Create a label node */
+ASTNode* createLabel(char* name) {
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_LABEL;
+    node->data.label.name = strdup(name);
+    return node;
+}
+
+/* Create a goto statement node */
+ASTNode* createGoto(char* name) {
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_GOTO;
+    node->data.gotostmt.name = strdup(name);
+    return node;
+}
+
 
 /* Display the AST structure (for debugging and education) */
 void printAST(ASTNode* node, int level) {
@@ -244,7 +388,152 @@ void printAST(ASTNode* node, int level) {
             printf("Body:\n");
             printAST(node->data.ifstmt.thenBlock, level + 2);
             break;
+
+        case NODE_FOR:
+            printf("FOR\n");
+            for (int i = 0; i < level + 1; i++) printf("  ");
+            printf("Init:\n");
+            printAST(node->data.forstmt.init, level + 2);
+            for (int i = 0; i < level + 1; i++) printf("  ");
+            printf("Condition:\n");
+            printAST(node->data.forstmt.condition, level + 2);
+            for (int i = 0; i < level + 1; i++) printf("  ");
+            printf("Update:\n");
+            printAST(node->data.forstmt.update, level + 2);
+            for (int i = 0; i < level + 1; i++) printf("  ");
+            printf("Body:\n");
+            printAST(node->data.forstmt.body, level + 2);
+            break;
+
+        case NODE_FUNCTION:
+            for (int i = 0; i < level; i++) printf("  ");
+            printf("FUNCTION: %s %s(...)\n", node->data.function.returnType, node->data.function.name);
+            if (node->data.function.params) {
+                for (int i = 0; i < level + 1; i++) printf("  ");
+                printf("Parameters:\n");
+                printAST(node->data.function.params, level + 2);
+            }
+            if (node->data.function.body) {
+                for (int i = 0; i < level + 1; i++) printf("  ");
+                printf("Body:\n");
+                printAST(node->data.function.body, level + 2);
+            }
+            break;
+        
+        case NODE_FUNCTION_LIST:
+            for (int i = 0; i < level; i++) printf("  ");
+            printf("FUNCTION_LIST:\n");
+            if (node->data.funclist.head) {
+                printAST(node->data.funclist.head, level + 1);
+            }
+            if (node->data.funclist.tail) {
+                printAST(node->data.funclist.tail, level);
+            }
+            break;
+        
+        case NODE_PARAMETER:
+            for (int i = 0; i < level; i++) printf("  ");
+            printf("PARAMETER: %s %s\n", node->data.parameter.type, node->data.parameter.name);
+            if (node->data.parameter.next) {
+                printAST(node->data.parameter.next, level);
+            }
+            break;
+        
+        case NODE_RETURN:
+            for (int i = 0; i < level; i++) printf("  ");
+            printf("RETURN:\n");
+            if (node->data.returnstmt.value) {
+                printAST(node->data.returnstmt.value, level + 1);
+            } else {
+                for (int i = 0; i < level + 1; i++) printf("  ");
+                printf("(void)\n");
+            }
+            break;
+        
+        case NODE_CALL:
+            for (int i = 0; i < level; i++) printf("  ");
+            printf("CALL: %s(...)\n", node->data.call.funcName);
+            if (node->data.call.args) {
+                for (int i = 0; i < level + 1; i++) printf("  ");
+                printf("Arguments:\n");
+                printAST(node->data.call.args, level + 2);
+            }
+            break;
+        
+        case NODE_CALL_EXPR:
+            for (int i = 0; i < level; i++) printf("  ");
+            printf("CALL_EXPR: %s(...)\n", node->data.call_expr.funcName);
+            if (node->data.call_expr.args) {
+                for (int i = 0; i < level + 1; i++) printf("  ");
+                printf("Arguments:\n");
+                printAST(node->data.call_expr.args, level + 2);
+            }
+            break;    
+
+            case NODE_PROGRAM:
+            printf("PROGRAM:\n");
+            if (node->data.program.globals) {
+                for (int i = 0; i < level + 1; i++) printf("  ");
+                printf("Global Declarations:\n");
+                printAST(node->data.program.globals, level + 2);
+            }
+            if (node->data.program.functions) {
+                for (int i = 0; i < level + 1; i++) printf("  ");
+                printf("Functions:\n");
+                printAST(node->data.program.functions, level + 2);
+            }
+            break;
+            
+        case NODE_GLOBAL_DECL:
+            printf("GLOBAL_DECL (int): %s\n", node->data.name);
+            break;
+            
+        case NODE_GLOBAL_DECL_DOUBLE:
+            printf("GLOBAL_DECL (double): %s\n", node->data.name);
+            break;
+            
+        case NODE_GLOBAL_DECL_INIT:
+            printf("GLOBAL_DECL_INIT: %s\n", node->data.decl_init.name);
+            printAST(node->data.decl_init.value, level + 1);
+            break;
+            
+        case NODE_GLOBAL_ARRAY_DECL:
+            printf("GLOBAL_ARRAY_DECL: %s[%d]\n", 
+                   node->data.array_decl.name, node->data.array_decl.size);
+            break;
+            
+        case NODE_GLOBAL_ARRAY_2D_DECL:
+            printf("GLOBAL_ARRAY_2D_DECL: %s[%d][%d]\n",
+                   node->data.array_2d_decl.name,
+                   node->data.array_2d_decl.rows,
+                   node->data.array_2d_decl.cols);
+            break;
+
+        case NODE_IF:
+            printf("IF\n");
+            for (int i = 0; i < level + 1; i++) printf("  ");
+            printf("Condition:\n");
+            printAST(node->data.ifstmt.condition, level + 2);
+            for (int i = 0; i < level + 1; i++) printf("  ");
+            printf("Then:\n");
+            printAST(node->data.ifstmt.thenBlock, level + 2);
+            break;
+
+        case NODE_IF_ELSE:
+            printf("IF-ELSE\n");
+            for (int i = 0; i < level + 1; i++) printf("  ");
+            printf("Condition:\n");
+            printAST(node->data.ifstmt.condition, level + 2);
+            for (int i = 0; i < level + 1; i++) printf("  ");
+            printf("Then:\n");
+            printAST(node->data.ifstmt.thenBlock, level + 2);
+            for (int i = 0; i < level + 1; i++) printf("  ");
+            printf("Else:\n");
+            printAST(node->data.ifstmt.elseBlock, level + 2);
+            break;
+
         default:
-            printf("UNKNOWN NODE TYPE\n");      
+            printf("UNKNOWN NODE TYPE\n");
     }
 }
+

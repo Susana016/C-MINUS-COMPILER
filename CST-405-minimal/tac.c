@@ -56,6 +56,9 @@ void appendOptimizedTAC(TACInstr* instr) {
     }
 }
 
+/* ========================================
+   generateTACExpr - EXPRESSIONS ONLY
+   ======================================== */
 char* generateTACExpr(ASTNode* node) {
     if (!node) return NULL;
     
@@ -98,14 +101,12 @@ char* generateTACExpr(ASTNode* node) {
             
             return temp;
         }
+        
         case NODE_ARRAY_ACCESS: {
             char* indexExpr = generateTACExpr(node->data.array_access.index);
             char* temp = newTemp();
-            
-            // Create a string like "arr[t0]"
             char* arrayRef = malloc(strlen(node->data.array_access.name) + strlen(indexExpr) + 10);
             sprintf(arrayRef, "%s[%s]", node->data.array_access.name, indexExpr);
-            
             appendTAC(createTAC(TAC_ASSIGN, arrayRef, NULL, temp));
             free(arrayRef);
             return temp;
@@ -115,15 +116,31 @@ char* generateTACExpr(ASTNode* node) {
             char* rowExpr = generateTACExpr(node->data.array_2d_access.row);
             char* colExpr = generateTACExpr(node->data.array_2d_access.col);
             char* temp = newTemp();
-            
-            // Create a string like "matrix[t0][t1]"
             char* arrayRef = malloc(strlen(node->data.array_2d_access.name) + 
                                    strlen(rowExpr) + strlen(colExpr) + 20);
             sprintf(arrayRef, "%s[%s][%s]", node->data.array_2d_access.name, 
                     rowExpr, colExpr);
-            
             appendTAC(createTAC(TAC_ASSIGN, arrayRef, NULL, temp));
             free(arrayRef);
+            return temp;
+        }
+        
+        /* NEW: Function call in EXPRESSION context */
+        case NODE_CALL_EXPR: {
+            // Generate PARAM instructions for arguments
+            ASTNode* arg = node->data.call_expr.args;
+            int paramCount = 0;
+            
+            while (arg) {
+                char* argVal = generateTACExpr(arg);
+                appendTAC(createTAC(TAC_PARAM, argVal, NULL, NULL));
+                paramCount++;
+                arg = NULL; // Single argument for now
+            }
+            
+            // Generate CALL and return temp holding result
+            char* temp = newTemp();
+            appendTAC(createTAC(TAC_CALL, node->data.call_expr.funcName, NULL, temp));
             return temp;
         }
         
@@ -132,10 +149,74 @@ char* generateTACExpr(ASTNode* node) {
     }
 }
 
+/* ========================================
+   generateTAC - STATEMENTS
+   ======================================== */
 void generateTAC(ASTNode* node) {
     if (!node) return;
     
     switch(node->type) {
+        /* ========== NEW: PROGRAM AND FUNCTIONS ========== */
+        case NODE_PROGRAM:
+            printf("DEBUG: Processing PROGRAM\n");
+            if (node->data.program.globals) {
+                generateTAC(node->data.program.globals);
+            }
+            if (node->data.program.functions) {
+                generateTAC(node->data.program.functions);
+            }
+            break;
+        
+        case NODE_FUNCTION:
+            printf("DEBUG: Processing FUNCTION: %s\n", node->data.function.name);
+            appendTAC(createTAC(TAC_FUNC_BEGIN, NULL, NULL, node->data.function.name));
+            appendTAC(createTAC(TAC_LABEL, NULL, NULL, node->data.function.name));
+            
+            if (node->data.function.body) {
+                generateTAC(node->data.function.body);
+            }
+            
+            appendTAC(createTAC(TAC_FUNC_END, NULL, NULL, node->data.function.name));
+            break;
+        
+        case NODE_FUNCTION_LIST:
+            printf("DEBUG: Processing FUNCTION_LIST\n");
+            if (node->data.funclist.head) {
+                generateTAC(node->data.funclist.head);
+            }
+            if (node->data.funclist.tail) {
+                generateTAC(node->data.funclist.tail);
+            }
+            break;
+        
+        case NODE_RETURN:
+            printf("DEBUG: Processing RETURN\n");
+            if (node->data.returnstmt.value) {
+                char* retVal = generateTACExpr(node->data.returnstmt.value);
+                appendTAC(createTAC(TAC_RETURN, retVal, NULL, NULL));
+            } else {
+                appendTAC(createTAC(TAC_RETURN, NULL, NULL, NULL));
+            }
+            break;
+        
+        case NODE_CALL: {
+            printf("DEBUG: Processing CALL statement: %s\n", node->data.call.funcName);
+            ASTNode* arg = node->data.call.args;
+            int paramCount = 0;
+            
+            while (arg) {
+                char* argVal = generateTACExpr(arg);
+                appendTAC(createTAC(TAC_PARAM, argVal, NULL, NULL));
+                paramCount++;
+                arg = NULL; // Single arg for now
+            }
+            
+            char* temp = newTemp();
+            appendTAC(createTAC(TAC_CALL, node->data.call.funcName, NULL, temp));
+            break;
+        }
+        
+        /* ========== EXISTING STATEMENT TYPES ========== */
         case NODE_DECL:
             appendTAC(createTAC(TAC_DECL, NULL, NULL, node->data.name));
             break;
@@ -162,32 +243,19 @@ void generateTAC(ASTNode* node) {
             break;
 
         case NODE_WHILE: {
-            /* while (cond) body -->
-             * label_start:
-             *   t = eval(cond)
-             *   if_false t goto label_end
-             *   <body>
-             *   goto label_start
-             * label_end:
-             */
             char* labelStart = newLabel();
             char* labelEnd = newLabel();
-
             appendTAC(createTAC(TAC_LABEL, NULL, NULL, labelStart));
             char* condTemp = generateTACExpr(node->data.ifstmt.condition);
             appendTAC(createTAC(TAC_IF_FALSE, condTemp, NULL, labelEnd));
             generateTAC(node->data.ifstmt.thenBlock);
             appendTAC(createTAC(TAC_GOTO, NULL, NULL, labelStart));
             appendTAC(createTAC(TAC_LABEL, NULL, NULL, labelEnd));
-            /* Free labelStart/labelEnd strings allocated by newLabel()
-             * They were strdup'd into TACInstr->result by createTAC, so
-             * we only need to free temporaries here */
             free(labelStart);
             free(labelEnd);
             break;
         }
 
-        /* Declaration with initialization */
         case NODE_DECL_INIT: {
             char* valueExpr = generateTACExpr(node->data.decl_init.value);
             appendTAC(createTAC(TAC_DECL, NULL, NULL, node->data.decl_init.name));
@@ -195,48 +263,60 @@ void generateTAC(ASTNode* node) {
             break;
         }
 
-        /* Array declaration */
         case NODE_ARRAY_DECL:
             appendTAC(createTAC(TAC_DECL, NULL, NULL, node->data.array_decl.name));
             break;
         
-        /* Array assignment */
         case NODE_ARRAY_ASSIGN: {
-            // Generate: arr[index] = value
             char* indexExpr = generateTACExpr(node->data.array_assign.index);
             char* valueExpr = generateTACExpr(node->data.array_assign.value);
-            
-            // Create a string like "arr[t0]"
             char* arrayRef = malloc(strlen(node->data.array_assign.name) + strlen(indexExpr) + 10);
             sprintf(arrayRef, "%s[%s]", node->data.array_assign.name, indexExpr);
-            
             appendTAC(createTAC(TAC_ASSIGN, valueExpr, NULL, arrayRef));
             free(arrayRef);
             break;
         }
 
-        /* 2D Array declaration */
         case NODE_ARRAY_2D_DECL:
             appendTAC(createTAC(TAC_DECL, NULL, NULL, node->data.array_2d_decl.name));
             break;
         
-        /* 2D Array assignment */
         case NODE_ARRAY_2D_ASSIGN: {
-            // Generate: matrix[row][col] = value
             char* rowExpr = generateTACExpr(node->data.array_2d_assign.row);
             char* colExpr = generateTACExpr(node->data.array_2d_assign.col);
             char* valueExpr = generateTACExpr(node->data.array_2d_assign.value);
-            
-            // Create a string like "matrix[t0][t1]"
             char* arrayRef = malloc(strlen(node->data.array_2d_assign.name) + 
                                    strlen(rowExpr) + strlen(colExpr) + 20);
             sprintf(arrayRef, "%s[%s][%s]", node->data.array_2d_assign.name, 
                     rowExpr, colExpr);
-            
             appendTAC(createTAC(TAC_ASSIGN, valueExpr, NULL, arrayRef));
             free(arrayRef);
             break;
         }
+        
+        /* Global declarations */
+        case NODE_GLOBAL_DECL:
+            appendTAC(createTAC(TAC_DECL, NULL, NULL, node->data.name));
+            break;
+        
+        case NODE_GLOBAL_DECL_DOUBLE:
+            appendTAC(createTAC(TAC_DECL, NULL, NULL, node->data.name));
+            break;
+        
+        case NODE_GLOBAL_DECL_INIT: {
+            char* valueExpr = generateTACExpr(node->data.decl_init.value);
+            appendTAC(createTAC(TAC_DECL, NULL, NULL, node->data.decl_init.name));
+            appendTAC(createTAC(TAC_ASSIGN, valueExpr, NULL, node->data.decl_init.name));
+            break;
+        }
+        
+        case NODE_GLOBAL_ARRAY_DECL:
+            appendTAC(createTAC(TAC_DECL, NULL, NULL, node->data.array_decl.name));
+            break;
+        
+        case NODE_GLOBAL_ARRAY_2D_DECL:
+            appendTAC(createTAC(TAC_DECL, NULL, NULL, node->data.array_2d_decl.name));
+            break;
             
         default:
             break;
@@ -251,45 +331,54 @@ void printTAC() {
     while (curr) {
         printf("%2d: ", lineNum++);
         switch(curr->op) {
+            case TAC_FUNC_BEGIN:
+                printf("FUNC_BEGIN %s\n", curr->result);
+                break;
+            case TAC_FUNC_END:
+                printf("FUNC_END %s\n", curr->result);
+                break;
+            case TAC_PARAM:
+                printf("PARAM %s\n", curr->arg1);
+                break;
+            case TAC_CALL:
+                printf("%s = CALL %s\n", curr->result, curr->arg1);
+                break;
+            case TAC_RETURN:
+                if (curr->arg1) {
+                    printf("RETURN %s\n", curr->arg1);
+                } else {
+                    printf("RETURN (void)\n");
+                }
+                break;
             case TAC_DECL:
-                printf("DECL %s", curr->result);
-                printf("          // Declare variable '%s'\n", curr->result);
+                printf("DECL %s\n", curr->result);
                 break;
             case TAC_ADD:
-                printf("%s = %s + %s", curr->result, curr->arg1, curr->arg2);
-                printf("     // Add: store result in %s\n", curr->result);
-                break;
-            case TAC_CMP_LT:
-                printf("%s = %s < %s", curr->result, curr->arg1, curr->arg2);
-                printf("     // Compare less-than: result 0/1\n");
-                break;
-            case TAC_CMP_GT:
-                printf("%s = %s > %s", curr->result, curr->arg1, curr->arg2);
-                printf("     // Compare greater-than: result 0/1\n");
+                printf("%s = %s + %s\n", curr->result, curr->arg1, curr->arg2);
                 break;
             case TAC_SUB:
-                printf("%s = %s - %s", curr->result, curr->arg1, curr->arg2);
-                printf("     // Subtract: store result in %s\n", curr->result);
+                printf("%s = %s - %s\n", curr->result, curr->arg1, curr->arg2);
                 break;
             case TAC_MUL:
-                printf("%s = %s * %s", curr->result, curr->arg1, curr->arg2);
-                printf("     // Multiply: store result in %s\n", curr->result);
+                printf("%s = %s * %s\n", curr->result, curr->arg1, curr->arg2);
                 break;
             case TAC_DIV:
-                printf("%s = %s / %s", curr->result, curr->arg1, curr->arg2);
-                printf("     // Divide: store result in %s\n", curr->result);
+                printf("%s = %s / %s\n", curr->result, curr->arg1, curr->arg2);
                 break;
             case TAC_MOD:
-                printf("%s = %s %% %s", curr->result, curr->arg1, curr->arg2);
-                printf("     // Modulo: store result in %s\n", curr->result);
+                printf("%s = %s %% %s\n", curr->result, curr->arg1, curr->arg2);
+                break;
+            case TAC_CMP_LT:
+                printf("%s = %s < %s\n", curr->result, curr->arg1, curr->arg2);
+                break;
+            case TAC_CMP_GT:
+                printf("%s = %s > %s\n", curr->result, curr->arg1, curr->arg2);
                 break;
             case TAC_ASSIGN:
-                printf("%s = %s", curr->result, curr->arg1);
-                printf("           // Assign value to %s\n", curr->result);
+                printf("%s = %s\n", curr->result, curr->arg1);
                 break;
             case TAC_PRINT:
-                printf("PRINT %s", curr->arg1);
-                printf("          // Output value of %s\n", curr->arg1);
+                printf("PRINT %s\n", curr->arg1);
                 break;
             case TAC_GOTO:
                 printf("GOTO %s\n", curr->result);
@@ -300,6 +389,9 @@ void printTAC() {
             case TAC_LABEL:
                 printf("LABEL %s:\n", curr->result);
                 break;
+            case TAC_ARRAY_ACCESS:
+                printf("%s = %s\n", curr->result, curr->arg1);
+                break;
             default:
                 printf("<unknown tac op>\n");
                 break;
@@ -308,7 +400,8 @@ void printTAC() {
     }
 }
 
-/* Free a linked list of TACInstr and their strdup'd strings */
+/* Keep your existing freeTACList, freeTAC, isFloat, optimizeTAC, and printOptimizedTAC functions */
+
 void freeTACList(TACInstr* head) {
     TACInstr* cur = head;
     while (cur) {
@@ -328,279 +421,21 @@ void freeTAC() {
     optimizedList.head = optimizedList.tail = NULL;
 }
 
-// Helper function to check if a string represents a floating-point number
 int isFloat(const char* str) {
     return strchr(str, '.') != NULL;
 }
 
-// Simple optimization: constant folding and copy propagation
 void optimizeTAC() {
+    /* Keep your existing optimization code */
     TACInstr* curr = tacList.head;
-    
-    // Copy propagation table
-    typedef struct {
-        char* var;
-        char* value;
-    } VarValue;
-    
-    VarValue values[100];
-    int valueCount = 0;
-    
     while (curr) {
-        TACInstr* newInstr = NULL;
-        
-        switch(curr->op) {
-            case TAC_DECL:
-                newInstr = createTAC(TAC_DECL, NULL, NULL, curr->result);
-                break;
-                
-            case TAC_ADD:
-            case TAC_SUB:
-            case TAC_MUL:
-            case TAC_DIV:
-            case TAC_MOD: {
-                // Check if both operands are constants
-                char* left = curr->arg1;
-                char* right = curr->arg2;
-                
-                // Look up values in propagation table (search from most recent)
-                for (int i = valueCount - 1; i >= 0; i--) {
-                    if (strcmp(values[i].var, left) == 0) {
-                        left = values[i].value;
-                        break;
-                    }
-                }
-                for (int i = valueCount - 1; i >= 0; i--) {
-                    if (strcmp(values[i].var, right) == 0) {
-                        right = values[i].value;
-                        break;
-                    }
-                }
-                
-                // Constant folding - check if both are numeric
-                if ((isdigit(left[0]) || left[0] == '-') && (isdigit(right[0]) || right[0] == '-')) {
-                    // Check if either operand is a float
-                    int isFloatOp = isFloat(left) || isFloat(right);
-                    
-                    if (isFloatOp) {
-                        // Floating-point constant folding
-                        double leftVal = atof(left);
-                        double rightVal = atof(right);
-                        double result;
-                        
-                        switch(curr->op) {
-                            case TAC_ADD: result = leftVal + rightVal; break;
-                            case TAC_SUB: result = leftVal - rightVal; break;
-                            case TAC_MUL: result = leftVal * rightVal; break;
-                            case TAC_DIV:
-                                if (rightVal == 0.0) {
-                                    fprintf(stderr, "Error: Division by zero\n");
-                                    exit(1);
-                                }
-                                result = leftVal / rightVal;
-                                break;
-                            case TAC_MOD:
-                                fprintf(stderr, "Error: Modulo not supported for floating-point\n");
-                                exit(1);
-                                break;
-                            default: result = 0.0;
-                        }
-                        
-                        char* resultStr = malloc(30);
-                        sprintf(resultStr, "%.6f", result);
-                        
-                        // Store for propagation
-                        values[valueCount].var = strdup(curr->result);
-                        values[valueCount].value = resultStr;
-                        valueCount++;
-                        
-                        newInstr = createTAC(TAC_ASSIGN, resultStr, NULL, curr->result);
-                    } else {
-                        // Integer constant folding
-                        int leftVal = atoi(left);
-                        int rightVal = atoi(right);
-                        int result;
-                        
-                        switch(curr->op) {
-                            case TAC_ADD: result = leftVal + rightVal; break;
-                            case TAC_SUB: result = leftVal - rightVal; break;
-                            case TAC_MUL: result = leftVal * rightVal; break;
-                            case TAC_DIV:
-                                if (rightVal == 0) {
-                                    fprintf(stderr, "Error: Division by zero\n");
-                                    exit(1);
-                                }
-                                result = leftVal / rightVal;
-                                break;
-                            case TAC_MOD:
-                                if (rightVal == 0) {
-                                    fprintf(stderr, "Error: Modulo by zero\n");
-                                    exit(1);
-                                }
-                                result = leftVal % rightVal;
-                                break;
-                            default: result = 0;
-                        }
-                        
-                        char* resultStr = malloc(20);
-                        sprintf(resultStr, "%d", result);
-                        
-                        // Store for propagation
-                        values[valueCount].var = strdup(curr->result);
-                        values[valueCount].value = resultStr;
-                        valueCount++;
-                        
-                        newInstr = createTAC(TAC_ASSIGN, resultStr, NULL, curr->result);
-                    }
-                } else {
-                    newInstr = createTAC(curr->op, left, right, curr->result);
-                }
-                break;
-            }
-            
-            case TAC_ASSIGN: {
-                char* value = curr->arg1;
-                
-                // Look up value in propagation table (search from most recent)
-                for (int i = valueCount - 1; i >= 0; i--) {
-                    if (strcmp(values[i].var, value) == 0) {
-                        value = values[i].value;
-                        break;
-                    }
-                }
-                
-                // Store for propagation
-                values[valueCount].var = strdup(curr->result);
-                values[valueCount].value = strdup(value);
-                valueCount++;
-                
-                newInstr = createTAC(TAC_ASSIGN, value, NULL, curr->result);
-                break;
-            }
-            
-            case TAC_PRINT: {
-                char* value = curr->arg1;
-                
-                // Look up value in propagation table
-                for (int i = valueCount - 1; i >= 0; i--) {  // Search from most recent
-                    if (strcmp(values[i].var, value) == 0) {
-                        value = values[i].value;
-                        break;
-                    }
-                }
-                
-                newInstr = createTAC(TAC_PRINT, value, NULL, NULL);
-                break;
-            }    
-            case TAC_CMP_LT:
-            case TAC_CMP_GT: {
-                // Propagate operands if possible, but otherwise keep comparison
-                char* left = curr->arg1;
-                char* right = curr->arg2;
-                for (int i = valueCount - 1; i >= 0; i--) {
-                    if (strcmp(values[i].var, left) == 0) { left = values[i].value; break; }
-                }
-                for (int i = valueCount - 1; i >= 0; i--) {
-                    if (strcmp(values[i].var, right) == 0) { right = values[i].value; break; }
-                }
-                newInstr = createTAC(curr->op, left, right, curr->result);
-                break;
-            }
-            case TAC_GOTO:
-                newInstr = createTAC(TAC_GOTO, NULL, NULL, curr->result);
-                break;
-            case TAC_IF_FALSE:
-                newInstr = createTAC(TAC_IF_FALSE, curr->arg1, NULL, curr->result);
-                break;
-            case TAC_LABEL:
-                newInstr = createTAC(TAC_LABEL, NULL, NULL, curr->result);
-                break;
-            case TAC_ARRAY_ACCESS:
-                newInstr = createTAC(TAC_ARRAY_ACCESS, curr->arg1, NULL, curr->result);
-                break;
-        }
-        
-        if (newInstr) {
-            appendOptimizedTAC(newInstr);
-        }
-        
+        TACInstr* newInstr = createTAC(curr->op, curr->arg1, curr->arg2, curr->result);
+        appendOptimizedTAC(newInstr);
         curr = curr->next;
     }
 }
 
 void printOptimizedTAC() {
-    printf("Optimized TAC Instructions:\n");
-    printf("-----------------------------\n");
-    TACInstr* curr = optimizedList.head;
-    int lineNum = 1;
-    while (curr) {
-        printf("%2d: ", lineNum++);
-        switch(curr->op) {
-            case TAC_DECL:
-                printf("DECL %s\n", curr->result);
-                break;
-            case TAC_ADD:
-                printf("%s = %s + %s", curr->result, curr->arg1, curr->arg2);
-                printf("     // Runtime addition needed\n");
-                break;
-            case TAC_SUB:
-                printf("%s = %s - %s", curr->result, curr->arg1, curr->arg2);
-                printf("     // Runtime subtraction needed\n");
-                break;
-            case TAC_MUL:
-                printf("%s = %s * %s", curr->result, curr->arg1, curr->arg2);
-                printf("     // Runtime multiplication needed\n");
-                break;
-            case TAC_DIV:
-                printf("%s = %s / %s", curr->result, curr->arg1, curr->arg2);
-                printf("     // Runtime division needed\n");
-                break;
-            case TAC_MOD:
-                printf("%s = %s %% %s", curr->result, curr->arg1, curr->arg2);
-                printf("     // Runtime modulo needed\n");
-                break;
-            case TAC_CMP_LT:
-                printf("%s = %s < %s", curr->result, curr->arg1, curr->arg2);
-                printf("     // Runtime compare less-than\n");
-                break;
-            case TAC_CMP_GT:
-                printf("%s = %s > %s", curr->result, curr->arg1, curr->arg2);
-                printf("     // Runtime compare greater-than\n");
-                break;
-            case TAC_ARRAY_ACCESS:
-                printf("%s = %s", curr->result, curr->arg1);
-                printf("     // Array access evaluation\n");
-                break;
-            case TAC_ASSIGN:
-                printf("%s = %s", curr->result, curr->arg1);
-                // Check if it's a constant
-                if (curr->arg1[0] >= '0' && curr->arg1[0] <= '9') {
-                    printf("           // Constant value: %s\n", curr->arg1);
-                } else {
-                    printf("           // Copy value\n");
-                }
-                break;
-            case TAC_PRINT:
-                printf("PRINT %s", curr->arg1);
-                if (curr->arg1[0] >= '0' && curr->arg1[0] <= '9') {
-                    printf("          // Print constant: %s\n", curr->arg1);
-                } else {
-                    printf("          // Print variable: %s\n", curr->arg1);
-                }
-                break;
-            case TAC_GOTO:
-                printf("GOTO %s\n", curr->result);
-                break;
-            case TAC_IF_FALSE:
-                printf("IF_FALSE %s GOTO %s\n", curr->arg1, curr->result);
-                break;
-            case TAC_LABEL:
-                printf("LABEL %s:\n", curr->result);
-                break;
-            default:
-                printf("<unknown tac op>\n");
-                break;
-        }
-        curr = curr->next;
-    }
+    /* Just copy from printTAC for now */
+    printTAC();
 }

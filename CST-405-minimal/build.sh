@@ -25,7 +25,9 @@ if [ $? -eq 0 ]; then
     echo "✓ Build successful!"
     echo ""
     echo "Running test with arrays..."
-    ./minicompiler test.c output.s
+  #  ./minicompiler test.c output.s
+   # ./minicompiler while_test.c output_while.s#
+   ./minicompiler new_test.c new_test.s
     
     echo ""
     echo "Generated MIPS code saved to output.s"

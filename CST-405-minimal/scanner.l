@@ -18,6 +18,12 @@
 "double"        { return DOUBLE; }
 "print"         { return PRINT; }
 "while"         { return WHILE; }
+"for"           { return FOR; }
+"if"            { return IF; }
+"else"          { return ELSE; }
+"return"        { return RETURN; }
+"void"          { return VOID; }
+"main"          { return MAIN; }
 
 [a-zA-Z_][a-zA-Z0-9_]* { 
     yylval.str = strdup(yytext);

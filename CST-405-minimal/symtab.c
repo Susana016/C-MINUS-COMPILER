@@ -1,69 +1,157 @@
-/* SYMBOL TABLE IMPLEMENTATION
- * Manages variable declarations and lookups
- * Essential for semantic analysis (checking if variables are declared)
- * Provides memory layout information for code generation
- */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "symtab.h"
 
-/* Global symbol table instance */
 SymbolTable symtab;
 
-/* Initialize an empty symbol table */
 void initSymTab() {
-    symtab.count = 0;       /* No variables yet */
-    symtab.nextOffset = 0;  /* Start at stack offset 0 */
+    /* Create global scope */
+    symtab.globalScope = malloc(sizeof(Scope));
+    symtab.globalScope->count = 0;
+    symtab.globalScope->nextOffset = 0;
+    symtab.globalScope->parent = NULL;
+    
+    symtab.currentScope = symtab.globalScope;
 }
 
-/* Add a new variable to the symbol table */
+void enterScope() {
+    Scope* newScope = malloc(sizeof(Scope));
+    newScope->count = 0;
+    newScope->nextOffset = 0;
+    newScope->parent = symtab.currentScope;  /* Link to parent */
+    
+    symtab.currentScope = newScope;  /* Push onto scope stack */
+}
+
+void exitScope() {
+    if (symtab.currentScope == symtab.globalScope) {
+        fprintf(stderr, "Error: Cannot exit global scope\n");
+        return;
+    }
+    
+    Scope* oldScope = symtab.currentScope;
+    symtab.currentScope = symtab.currentScope->parent;  /* Pop */
+    
+    /* Free the old scope (optional - may want to keep for debugging) */
+    free(oldScope);
+}
+
+Symbol* lookupSymbol(char* name) {
+    Scope* scope = symtab.currentScope;
+    
+    /* Search from current scope up to global */
+    while (scope != NULL) {
+        for (int i = 0; i < scope->count; i++) {
+            if (strcmp(scope->symbols[i].name, name) == 0) {
+                return &scope->symbols[i];  /* Found */
+            }
+        }
+        scope = scope->parent;  /* Move to parent scope */
+    }
+    
+    return NULL;  /* Not found in any scope */
+}
+
+int isInCurrentScope(char* name) {
+    for (int i = 0; i < symtab.currentScope->count; i++) {
+        if (strcmp(symtab.currentScope->symbols[i].name, name) == 0) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
 int addVar(char* name, VarType type) {
-    /* Check for duplicate declaration */
-    if (isVarDeclared(name)) {
-        return -1;  /* Error: variable already exists */
+    /* Check if already in CURRENT scope (skip check for unnamed/reserved variables) */
+    if (strlen(name) > 0 && isInCurrentScope(name)) {
+        return -1;  /* Duplicate in this scope */
     }
-    
-    /* Add new symbol entry */
-    symtab.vars[symtab.count].name = strdup(name);
-    symtab.vars[symtab.count].offset = symtab.nextOffset;
-    symtab.vars[symtab.count].type = type;
-    
-    /* Advance offset based on type (4 bytes for int, 8 bytes for double in MIPS) */
+
+    Scope* scope = symtab.currentScope;
+    scope->symbols[scope->count].name = strdup(name);
+    scope->symbols[scope->count].type = type;
+    scope->symbols[scope->count].offset = scope->nextOffset;
+    scope->symbols[scope->count].isFunction = 0;
+
     if (type == TYPE_DOUBLE) {
-        symtab.nextOffset += 8;
+        scope->nextOffset += 8;
     } else {
-        symtab.nextOffset += 4;
+        scope->nextOffset += 4;
     }
-    symtab.count++;
+
+    scope->count++;
+    return scope->symbols[scope->count - 1].offset;
+}
+
+int addFunction(char* name, char* returnType, char** paramTypes, int paramCount) {
+    /* Functions go in global scope */
+    if (isInCurrentScope(name)) {
+        return -1;  /* Already declared */
+    }
     
-    /* Return the offset for this variable */
-    return symtab.vars[symtab.count - 1].offset;
+    Scope* scope = symtab.globalScope;
+    scope->symbols[scope->count].name = strdup(name);
+    scope->symbols[scope->count].isFunction = 1;
+    scope->symbols[scope->count].returnType = strdup(returnType);
+    scope->symbols[scope->count].paramCount = paramCount;
+    scope->symbols[scope->count].paramTypes = paramTypes;
+    scope->symbols[scope->count].offset = -1;  /* Functions don't have offsets */
+    
+    scope->count++;
+    return 0;  /* Success */
 }
 
-/* Look up a variable's stack offset */
+int addParameter(char* name, char* type) {
+    /* Parameters have positive offsets (above frame pointer) */
+    if (isInCurrentScope(name)) {
+        return -1;
+    }
+    
+    Scope* scope = symtab.currentScope;
+    scope->symbols[scope->count].name = strdup(name);
+    scope->symbols[scope->count].type = (strcmp(type, "double") == 0) ? TYPE_DOUBLE : TYPE_INT;
+    scope->symbols[scope->count].isFunction = 0;
+    
+    /* Parameters start at offset +8 (after $ra and $fp) */
+    static int paramOffset = 8;
+    scope->symbols[scope->count].offset = paramOffset;
+    paramOffset += 4;  /* Each param is 4 bytes */
+    
+    scope->count++;
+    return 0;
+}
+
 int getVarOffset(char* name) {
-    /* Linear search through symbol table */
-    for (int i = 0; i < symtab.count; i++) {
-        if (strcmp(symtab.vars[i].name, name) == 0) {
-            return symtab.vars[i].offset;  /* Found it */
-        }
-    }
-    return -1;  /* Variable not found - semantic error */
+    Symbol* sym = lookupSymbol(name);
+    return sym ? sym->offset : -1;
 }
 
-/* Get a variable's type */
 VarType getVarType(char* name) {
-    /* Linear search through symbol table */
-    for (int i = 0; i < symtab.count; i++) {
-        if (strcmp(symtab.vars[i].name, name) == 0) {
-            return symtab.vars[i].type;  /* Found it */
-        }
-    }
-    return TYPE_INT;  /* Default to int if not found */
+    Symbol* sym = lookupSymbol(name);
+    return sym ? sym->type : TYPE_INT;
 }
 
-/* Check if a variable has been declared */
 int isVarDeclared(char* name) {
-    return getVarOffset(name) != -1;  /* True if found, false otherwise */
+    return lookupSymbol(name) != NULL;
+}
+
+void printScope(Scope* scope, int level) {
+    if (!scope) return;
+    for (int i = 0; i < scope->count; i++) {
+        Symbol s = scope->symbols[i];
+        for (int j = 0; j < level; j++) printf("  ");  // Indent per scope
+        printf("| %-15s | %-10s | %-5s | %-6d |\n",
+               s.name,
+               s.isFunction ? "Function" : "Variable",
+               s.type == TYPE_INT ? "int" : "double",
+               s.offset);
+    }
+    printScope(scope->parent, level + 1);
+}
+
+void printSymbolTable(SymbolTable* table) {
+    printf("| %-15s | %-10s | %-5s | %-6s |\n", "Identifier", "Kind", "Type", "Offset");
+    printf("|---------------------------------------------|\n");
+    printScope(table->currentScope, 0);
 }

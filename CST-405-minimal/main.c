@@ -7,6 +7,8 @@
 #include "ast.h"
 #include "codegen.h"
 #include "tac.h"
+#include "symtab.h"
+
 
 extern int yyparse();
 extern FILE* yyin;
@@ -24,6 +26,9 @@ int main(int argc, char* argv[]) {
         fprintf(stderr, "Error: Cannot open input file '%s'\n", argv[1]);
         return 1;
     }
+
+    initSymTab();
+
     
     printf("\n");
     printf("+============================================================+\n");
@@ -51,6 +56,12 @@ int main(int argc, char* argv[]) {
         printf("| Tree structure representing the program hierarchy:        |\n");
         printf("+------------------------------------------------------------+\n");
         printAST(root, 0);
+        printf("\n");
+
+        printf("+------------------------------------------------------------+\n");
+        printf("| PHASE 2.5: SYMBOL TABLE DUMP                              |\n");
+        printf("+------------------------------------------------------------+\n");
+        printSymbolTable(&symtab);
         printf("\n");
         
         /* PHASE 3: Intermediate Code */

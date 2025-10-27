@@ -1,35 +1,66 @@
-int a = 10;
-int b = 20;
-int c;
-c = a + b;
-print(c);
+int gx = 5;
+int gy = 3;
 
-int nums[5];
-nums[0] = 1;
-nums[1] = 2;
-nums[2] = 3;
-nums[3] = 4;
-nums[4] = 5;
+int getNumber() {
+    int result;
+    result = 42;
+    return result;
+}
 
-int sum1;
-sum1 = nums[0] + nums[1] + nums[2] + nums[3] + nums[4];
-print(sum1);
+int main() {
+    int sum = gx + gy;
+    int diff = gx - gy;
+    int prod = gx * gy;
+    int quot = gx / gy;
+    int mod = gx % gy;
+    print(sum);
+    print(diff);
+    print(prod);
+    print(quot);
+    print(mod);
 
-int grid[3][3];
-grid[0][0] = 1;
-grid[0][1] = 2;
-grid[0][2] = 3;
-grid[1][0] = 4;
-grid[1][1] = 5;
-grid[1][2] = 6;
-grid[2][0] = 7;
-grid[2][1] = 8;
-grid[2][2] = 9;
+    int funcResult = getNumber();
+    print(funcResult);
 
-int sum2;
-sum2 = grid[0][0] + grid[1][1] + grid[2][2];
-print(sum2);
+    int arr[3];
+    arr[0] = 10;
+    arr[1] = 20;
+    arr[2] = 30;
+    int arrSum = arr[0] + arr[1] + arr[2];
+    print(arrSum);
 
-int result;
-result = a * 2 + b / 2 - nums[2];
-print(result);
+    int matrix[2][2];
+    matrix[0][0] = 1;
+    matrix[0][1] = 2;
+    matrix[1][0] = 3;
+    matrix[1][1] = 4;
+    int diagonal = matrix[0][0] + matrix[1][1];
+    print(diagonal);
+
+    int i = 0;
+    int loopSum = 0;
+    while (i < 5) {
+        loopSum = loopSum + i;
+        i = i + 1;
+    }
+    print(loopSum);
+
+    int complex = gx * 2 + arr[1] / 2 - mod;
+    print(complex);
+
+    int testVal = 7;
+    if (testVal > 7) {
+        print(100);
+    } else {
+        print(200);
+    }
+
+    int forSum = 0;
+    int j;
+    for (j = 0; j < 5; j = j + 1) {
+        forSum = forSum + j;
+    }
+    print(forSum);
+
+    return 0;
+}

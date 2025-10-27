@@ -4,189 +4,153 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is an educational compiler for a minimal C-like language that demonstrates all compilation phases. It compiles a simple language (supporting integers, doubles, arrays, arithmetic, print statements, and while loops) into MIPS assembly code. The compiler is designed for teaching compiler design concepts with clear phase separation and extensive documentation.
+This is an educational C compiler that demonstrates all phases of compilation. It compiles a minimal C-like language to MIPS assembly, suitable for running on MIPS simulators (MARS, SPIM, QtSPIM).
+
+## Language Features
+
+The compiler supports a C-like language with:
+- Integer and double variable declarations (local and global)
+- 1D and 2D arrays
+- Binary operators: `+`, `-`, `*`, `/`, `%`, `<`, `>`
+- While loops
+- Functions with parameters and return statements
+- Function calls (including as expressions)
+- Print statements
+
+Note: No actual if/else statements are currently implemented, but the AST structures exist for if/else and goto/label support.
 
 ## Build Commands
 
-### Standard Development
 ```bash
 # Build the compiler
 make
 
-# Clean build artifacts
+# Clean generated files
 make clean
 
-# Build and run basic test
+# Build and run a test
 make test
 
 # Test with a specific file
 make test-file FILE=yourfile.c
 
-# Test optimization features
-make test-opt
-
-# Test array support
-make test-arrays
-
-# Test double support
-make test-doubles
-
-# Show all available make targets
-make help
-
-# Show platform configuration
+# Platform information
 make info
 ```
 
-### Running the Compiler
-```bash
-# Basic usage
-./minicompiler <input.c> <output.s>
+The Makefile is cross-platform compatible (Windows and Linux/Unix).
 
-# Example
-./minicompiler test.c output.s
-```
-
-The generated `.s` file contains MIPS assembly that can be run in simulators like MARS, SPIM, or QtSPIM.
-
-## Architecture
-
-### Compilation Pipeline
+## Compilation Pipeline
 
 The compiler follows a classic multi-phase architecture:
 
-1. **Lexical Analysis** (`scanner.l`): Tokenizes source code using Flex
-2. **Syntax Analysis** (`parser.y`): Builds Abstract Syntax Tree using Bison
-3. **AST Construction** (`ast.c`, `ast.h`): Creates hierarchical program representation
-4. **Semantic Analysis** (`symtab.c`, `symtab.h`): Symbol table and type checking
-5. **Intermediate Code** (`tac.c`, `tac.h`): Generates Three-Address Code (TAC)
-6. **Optimization** (`tac.c`): Constant folding and propagation
-7. **Code Generation** (`codegen.c`, `codegen.h`): Produces MIPS assembly
+1. **Lexical Analysis** (`scanner.l`) - Tokenization using Flex
+2. **Syntax Analysis** (`parser.y`) - Parsing and AST construction using Bison
+3. **Semantic Analysis** (`symtab.c`) - Symbol table with scope management
+4. **Intermediate Code** (`tac.c`) - Three-Address Code (TAC) generation
+5. **Optimization** (`tac.c`) - Constant folding and copy propagation
+6. **Code Generation** (`codegen.c`) - MIPS assembly output
 
-### Key Components
+## Key Architecture Components
 
-**AST (Abstract Syntax Tree)**
-- Defined in `ast.h` with extensive node types (NODE_NUM, NODE_BINOP, NODE_ARRAY_ACCESS, etc.)
-- Each node type has specific data structures in the union
-- Supports 1D and 2D arrays, while loops, and various expressions
-- Note: If/else statement structures exist in the AST definition but are currently disabled in the parser
+### Abstract Syntax Tree (AST) - `ast.h` / `ast.c`
 
-**TAC (Three-Address Code)**
-- Intermediate representation with maximum 3 operands per instruction
-- Supports arithmetic (ADD, SUB, MUL, DIV, MOD), comparisons (CMP_LT, CMP_GT), control flow (GOTO, IF_FALSE, LABEL)
-- Uses temporary variables (t0, t1, ...) for intermediate results
-- Enables optimization passes before final code generation
+The AST supports a hierarchical program structure:
+- **Program level**: Contains optional global declarations and function list
+- **Global declarations**: Variables, arrays, and initialized variables
+- **Functions**: With parameters, local variables, and statements
+- **Statements**: declarations, assignments, print, while loops, return statements, function calls
+- **Expressions**: Variables, numbers, binary operations, array accesses, function calls
 
-**Symbol Table**
-- Tracks variable declarations and their stack offsets
-- Supports TYPE_INT and TYPE_DOUBLE
-- Maximum 100 variables (MAX_VARS)
-- Maps variable names to memory locations for code generation
+Key node types:
+- `NODE_PROGRAM` - Top-level program with globals and functions
+- `NODE_FUNCTION` / `NODE_FUNCTION_LIST` - Function definitions
+- `NODE_GLOBAL_DECL` variants - Global variable declarations
+- `NODE_ARRAY_DECL`, `NODE_ARRAY_2D_DECL` - Array declarations (1D and 2D)
+- `NODE_WHILE` - While loop control flow
+- `NODE_RETURN`, `NODE_CALL`, `NODE_CALL_EXPR` - Function support
 
-**Memory Model**
-- Variables allocated on the stack with a fixed 400-byte allocation
-- Stack grows downward from high addresses
-- Each variable has a 4-byte stack offset (even doubles occupy 4 bytes in current implementation)
-- Uses MIPS registers: $sp for stack pointer, $t0-$t7 for temporaries
+### Symbol Table - `symtab.h` / `symtab.c`
 
-### Supported Language Features
+Hierarchical scope-based symbol table:
+- Maintains a linked list of scopes with parent pointers
+- Global scope is always accessible
+- Function scopes are entered/exited during compilation
+- Tracks variables (with types and stack offsets) and functions (with parameter types and return types)
 
-**Currently Enabled:**
-- Integer and double variable declarations: `int x;` `double y;`
-- Declaration with initialization: `int x = 5;`
-- 1D arrays: `int arr[3];` with access `arr[0]` and assignment `arr[0] = 5;`
-- 2D arrays: `int matrix[2][2];` with access `matrix[0][1]` and assignment `matrix[0][1] = 5;`
-- Arithmetic operators: `+` `-` `*` `/` `%`
-- Comparison operators: `<` `>`
-- Assignment: `x = 10;`
-- Print statements: `print(x);`
-- While loops: `while (x < 10) { ... }`
+Key functions:
+- `initSymTab()` - Initialize with global scope
+- `enterScope()` / `exitScope()` - Manage function/block scopes
+- `addVar()`, `addFunction()`, `addParameter()` - Add symbols
+- `lookupSymbol()` - Search current and parent scopes
+- `isInCurrentScope()` - Check only the current scope
 
-**Currently Disabled:**
-- If/else statements (grammar and AST structures exist but creation functions are commented out)
+### Three-Address Code (TAC) - `tac.h` / `tac.c`
 
-## Cross-Platform Build System
+Intermediate representation with instructions limited to 3 operands:
+- Arithmetic: `TAC_ADD`, `TAC_SUB`, `TAC_MUL`, `TAC_DIV`, `TAC_MOD`
+- Comparison: `TAC_CMP_LT`, `TAC_CMP_GT`
+- Control flow: `TAC_GOTO`, `TAC_IF_FALSE`, `TAC_LABEL`
+- Functions: `TAC_FUNC_BEGIN`, `TAC_FUNC_END`, `TAC_PARAM`, `TAC_CALL`, `TAC_RETURN`
+- Other: `TAC_ASSIGN`, `TAC_DECL`, `TAC_PRINT`, `TAC_ARRAY_ACCESS`
 
-The Makefile is designed to work on both Windows and Unix/Linux:
-- Automatically detects OS and adjusts commands
-- On Windows: uses `.exe` extension, Windows command syntax
-- On Unix/Linux: uses standard Unix commands
-- Dependencies: `gcc`, `flex`, `bison`
+Key functions:
+- `initTAC()` - Initialize TAC generation
+- `generateTAC(ASTNode*)` - Convert AST to TAC
+- `newTemp()` - Generate temporary variables (t0, t1, ...)
+- `newLabel()` - Generate unique labels for control flow
+- `optimizeTAC()` - Perform constant folding and copy propagation
+- `freeTAC()` - Clean up allocated memory
 
-## File Organization
+### Code Generation - `codegen.h` / `codegen.c`
 
-```
-Core Compiler Files:
-├── scanner.l          # Lexical analyzer rules (Flex)
-├── parser.y           # Grammar and parser (Bison)
-├── ast.c/h            # AST node creation and manipulation
-├── symtab.c/h         # Symbol table management
-├── tac.c/h            # Three-address code generation and optimization
-├── codegen.c/h        # MIPS assembly code generation
-└── main.c             # Driver program with phase orchestration
+Generates MIPS assembly from the AST:
+- Variables are stored on the stack with $sp-relative offsets
+- Uses $t0-$t7 for temporary values
+- System calls for print operations (syscall 1 for integers, syscall 3 for doubles)
+- Function calls follow MIPS calling conventions
 
-Build System:
-└── Makefile           # Cross-platform build configuration
+Main function: `generateMIPS(ASTNode* root, const char* filename)`
 
-Test Files:
-├── test.c             # Basic test program
-├── test_modulo.c      # Modulo operator test
-├── test_operations.c  # Various operations test
-├── test_doubles.c     # Double type test
-├── while_test.c       # While loop test
-└── comprehensive_test.c # Comprehensive features test
+## Development Workflow
 
-Generated Files:
-├── lex.yy.c           # Generated lexer
-├── parser.tab.c/h     # Generated parser
-├── *.o                # Object files
-├── *.s                # Generated MIPS assembly
-└── minicompiler(.exe) # Compiled compiler executable
-```
+When adding new features:
 
-## Development Notes
+1. **Update the lexer** (`scanner.l`) if new tokens are needed
+2. **Update the parser** (`parser.y`) to recognize new grammar rules
+3. **Add AST node types** in `ast.h` and constructors in `ast.c`
+4. **Update symbol table** (`symtab.c`) if new semantic checks are needed
+5. **Extend TAC generation** (`tac.c`) to handle new constructs
+6. **Update code generator** (`codegen.c`) to emit MIPS for new features
+7. **Test** with example programs in `.c` files
 
-### Modifying the Language
+## Memory Model
 
-To add new features:
+The compiler uses a stack-based memory model:
+- Stack grows downward (high addresses to low)
+- $sp points to the current top of stack
+- Local variables are allocated at fixed offsets from $sp
+- Arrays reserve contiguous memory (4 bytes per integer, 8 bytes per double)
 
-1. **Add tokens** in `scanner.l` for new keywords or operators
-2. **Update grammar** in `parser.y` with new production rules
-3. **Extend AST** in `ast.h` with new node types and data structures
-4. **Implement AST constructors** in `ast.c` for new nodes
-5. **Generate TAC** in `tac.c` for new constructs
-6. **Update code generation** in `codegen.c` to emit MIPS for new features
-7. **Update symbol table** in `symtab.c` if new variable types are added
+## Testing
 
-### TAC Optimization
+Test files are in the root directory:
+- `test.c` - Basic test with arrays and 2D arrays
+- `test_operations.c` - Test arithmetic operations
+- `test_doubles.c` - Test double precision support
+- `while_test.c` - Test while loops
+- `comprehensive_test.c` - Comprehensive feature tests
+- `simple_test.c`, `new_test.c`, `test_modulo.c` - Various feature tests
 
-Current optimizations in `tac.c`:
-- **Constant folding**: Evaluates compile-time constant expressions
-- **Constant propagation**: Replaces variables with known constant values
+Run the compiler: `./minicompiler <input.c> <output.s>`
+Then run the output in a MIPS simulator.
 
-### MIPS Code Generation
+## Important Notes
 
-Key aspects in `codegen.c`:
-- Stack-based variable storage with fixed 400-byte allocation
-- Temporaries use $t0-$t7 registers
-- System calls for print (syscall 1 for integers)
-- Label generation for control flow (while loops use unique labels)
-
-### Testing
-
-Test files demonstrate different features:
-- Simple arithmetic and assignments
-- Array operations (1D and 2D)
-- While loops with comparisons
-- Modulo operations
-- Double precision values
-
-Run tests individually with `make test-file FILE=<testfile>.c` to see full compilation output including AST, TAC, optimizations, and generated MIPS code.
-
-## Educational Focus
-
-This compiler prioritizes clarity and demonstration of compiler concepts:
-- Extensive comments explaining "what" and "why"
-- Visual phase separation in output with ASCII boxes
-- Complete pipeline from source to assembly visible to users
-- Each phase produces human-readable intermediate representations
+- The parser requires semicolons after all statements
+- All variables must be declared before use
+- The compiler generates detailed output showing each compilation phase
+- Array indices and 2D array indices are computed at runtime
+- While loops use labels and conditional jumps in TAC
+- Functions can be nested in the AST but code generation may have limitations
+- Global variables and local variables are handled separately in the symbol table

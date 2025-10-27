@@ -1,201 +1,319 @@
 %{
 /* SYNTAX ANALYZER (PARSER)
- * This is the second phase of compilation - checking grammar rules
- * Bison generates a parser that builds an Abstract Syntax Tree (AST)
- * The parser uses tokens from the scanner to verify syntax is correct
+ * Enhanced with proper global and function scope support
+ * This version allows global declarations and function definitions
  */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "ast.h"
 
-/* External declarations for lexer interface */
-extern int yylex();      /* Get next token from scanner */
-extern int yyparse();    /* Parse the entire input */
-extern FILE* yyin;       /* Input file handle */
+extern int yylex();
+extern int yyparse();
+extern FILE* yyin;
 
-void yyerror(const char* s);  /* Error handling function */
-ASTNode* root = NULL;          /* Root of the Abstract Syntax Tree */
+void yyerror(const char* s);
+ASTNode* root = NULL;
 %}
 
-/* SEMANTIC VALUES UNION
- * Defines possible types for tokens and grammar symbols
- * This allows different grammar rules to return different data types
- */
 %union {
-    int num;                /* For integer literals */
-    double fnum;            /* For floating-point literals */
-    char* str;              /* For identifiers */
-    struct ASTNode* node;   /* For AST nodes */
+    int num;
+    double fnum;
+    char* str;
+    struct ASTNode* node;
 }
 
-/* TOKEN DECLARATIONS with their semantic value types */
-%token <num> NUM              /* Number token carries an integer value */
-%token <fnum> FLOAT_NUM       /* Floating-point number token */
-%token <str> ID               /* Identifier token carries a string */
-%token INT DOUBLE PRINT WHILE /* IF ELSE */ /* Keywords have no semantic value; IF/ELSE disabled */
-%token LBRACE RBRACE LPAREN RPAREN LBRACKET RBRACKET/* Braces and parentheses */
+/* TOKEN DECLARATIONS */
+%token <num> NUM
+%token <fnum> FLOAT_NUM
+%token <str> ID
+%token INT DOUBLE PRINT WHILE FOR IF ELSE VOID RETURN MAIN
+%token LBRACE RBRACE LPAREN RPAREN LBRACKET RBRACKET COMMA
 
-/* NON-TERMINAL TYPES - Define what type each grammar rule returns */
-%type <node> program stmt_list stmt decl assign expr print_stmt while_stmt /* if_stmt if_else_stmt disabled */
+/* NON-TERMINAL TYPES */
+%type <node> program function_list function_decl param_list
+%type <node> global_decl_list global_decl
+%type <node> stmt_list stmt decl assign expr print_stmt while_stmt for_stmt if_stmt
 
-/* OPERATOR PRECEDENCE AND ASSOCIATIVITY */
-%left '+' '-'      /* Addition and subtraction (lowest precedence) */
-%left '*' '/' '%'  /* Multiplication, division, and modulo (higher precedence) */
-%left '<' '>'      /* Relational operators */
+/* OPERATOR PRECEDENCE */
+%left '+' '-'
+%left '*' '/' '%'
+%left '<' '>'
 
 %%
 
-/* GRAMMAR RULES - Define the structure of our language */
+/* ============================================
+   PROGRAM STRUCTURE - Top level with global scope
+   ============================================ */
 
-/* PROGRAM RULE - Entry point of our grammar */
 program:
-    stmt_list { 
-        /* Action: Save the statement list as our AST root */
-        root = $1;  /* $1 refers to the first symbol (stmt_list) */
+    global_decl_list function_list {
+        /* Program consists of optional global declarations followed by functions */
+        $$ = createProgram($1, $2);
+        root = $$;
+    }
+    | function_list {
+        /* Program with only functions, no global variables */
+        $$ = createProgram(NULL, $1);
+        root = $$;
+    }
+    | stmt_list {
+        /* Old style: statements only - wrap in implicit main() */
+        ASTNode* mainFunc = createFunction("main", "int", NULL, $1);
+        $$ = createProgram(NULL, mainFunc);
+        root = $$;
+    }
+    | global_decl_list stmt_list {
+        /* Old style with globals: wrap statements in implicit main() */
+        ASTNode* mainFunc = createFunction("main", "int", NULL, $2);
+        $$ = createProgram($1, mainFunc);
+        root = $$;
     }
     ;
 
-/* STATEMENT LIST - Handles multiple statements */
+/* GLOBAL DECLARATIONS - Variables declared outside functions */
+global_decl_list:
+    global_decl {
+        $$ = $1;
+    }
+    | global_decl_list global_decl {
+        $$ = createStmtList($1, $2);
+    }
+    ;
+
+global_decl:
+    INT ID ';' {
+        /* Global variable: int x; */
+        $$ = createGlobalDecl($2);
+        free($2);
+    }
+    | DOUBLE ID ';' {
+        /* Global double: double x; */
+        $$ = createGlobalDeclDouble($2);
+        free($2);
+    }
+    | INT ID '=' expr ';' {
+        /* Global with initialization: int x = 10; */
+        $$ = createGlobalDeclInit($2, $4);
+        free($2);
+    }
+    | INT ID LBRACKET NUM RBRACKET ';' {
+        /* Global 1D array: int arr[10]; */
+        $$ = createGlobalArrayDecl($2, $4);
+        free($2);
+    }
+    | INT ID LBRACKET NUM RBRACKET LBRACKET NUM RBRACKET ';' {
+        /* Global 2D array: int matrix[5][5]; */
+        $$ = createGlobalArray2DDecl($2, $4, $7);
+        free($2);
+    }
+    ;
+
+/* ============================================
+   FUNCTION DECLARATIONS - Function scope
+   ============================================ */
+
+function_list:
+    function_decl {
+        $$ = $1;
+    }
+    | function_list function_decl {
+        $$ = createFunctionList($1, $2);
+    }
+    ;
+
+function_decl:
+    INT ID LPAREN param_list RPAREN LBRACE stmt_list RBRACE {
+        /* int function_name(params) { body } */
+        $$ = createFunction($2, "int", $4, $7);
+        free($2);
+    }
+    | VOID ID LPAREN param_list RPAREN LBRACE stmt_list RBRACE {
+        /* void function_name(params) { body } */
+        $$ = createFunction($2, "void", $4, $7);
+        free($2);
+    }
+    | INT MAIN LPAREN RPAREN LBRACE stmt_list RBRACE {
+        /* Special case: int main() { body } */
+        $$ = createFunction("main", "int", NULL, $6);
+    }
+    | VOID MAIN LPAREN RPAREN LBRACE stmt_list RBRACE {
+        /* void main() { body } */
+        $$ = createFunction("main", "void", NULL, $6);
+    }
+    ;
+
+/* PARAMETER LIST */
+param_list:
+    INT ID {
+        $$ = createParameter($2, "int", NULL);
+        free($2);
+    }
+    | DOUBLE ID {
+        $$ = createParameter($2, "double", NULL);
+        free($2);
+    }
+    | param_list COMMA INT ID {
+        $$ = createParameter($4, "int", $1);
+        free($4);
+    }
+    | param_list COMMA DOUBLE ID {
+        $$ = createParameter($4, "double", $1);
+        free($4);
+    }
+    | /* empty */ {
+        $$ = NULL;
+    }
+    ;
+
+/* ============================================
+   STATEMENTS - Inside function scope
+   ============================================ */
+
 stmt_list:
-    stmt { 
-        /* Base case: single statement */
-        $$ = $1;  /* Pass the statement up as-is */
+    stmt {
+        $$ = $1;
     }
-    | stmt_list stmt { 
-        /* Recursive case: list followed by another statement */
-        $$ = createStmtList($1, $2);  /* Build linked list of statements */
+    | stmt_list stmt {
+        $$ = createStmtList($1, $2);
     }
     ;
 
-/* STATEMENT TYPES - The three kinds of statements we support */
 stmt:
-    decl        /* Variable declaration */
-    | assign    /* Assignment statement */
-    | print_stmt /* Print statement */
-    | while_stmt /* While loop */
+    decl
+    | assign
+    | print_stmt
+    | while_stmt
+    | for_stmt
+    | if_stmt
+    | RETURN expr ';' {
+        $$ = createReturn($2);
+    }
+    | RETURN ';' {
+        $$ = createReturn(NULL);
+    }
+    | ID LPAREN expr RPAREN ';' {
+        /* Function call with argument */
+        $$ = createCall($1, $3);
+        free($1);
+    }
+    | ID LPAREN RPAREN ';' {
+        /* Function call without arguments */
+        $$ = createCall($1, NULL);
+        free($1);
+    }
     ;
 
-/* DECLARATION RULE - "int x;" or "double x;" or arrays */
+/* LOCAL DECLARATIONS - Variables inside functions */
 decl:
-    INT ID ';' { 
-        /* Create integer declaration node */
+    INT ID ';' {
         $$ = createDecl($2);
         free($2);
     }
-    | DOUBLE ID ';' { 
-        /* Create double declaration node */
+    | DOUBLE ID ';' {
         $$ = createDeclDouble($2);
         free($2);
     }
     | INT ID '=' expr ';' {
-        /* Declaration with initialization: int x = 5; */
         $$ = createDeclInit($2, $4);
         free($2);
     }
     | INT ID LBRACKET NUM RBRACKET ';' {
-        /* 1D Array declaration: int arr[3]; */
         $$ = createArrayDecl($2, $4);
         free($2);
     }
     | INT ID LBRACKET NUM RBRACKET LBRACKET NUM RBRACKET ';' {
-        /* 2D Array declaration: int matrix[2][2]; */
         $$ = createArray2DDecl($2, $4, $7);
         free($2);
     }
     ;
 
-/* ASSIGNMENT RULE - "x = expr;" or array assignments */
+/* ASSIGNMENT */
 assign:
-    ID '=' expr ';' { 
-        /* Simple variable assignment: x = 10; */
+    ID '=' expr ';' {
         $$ = createAssign($1, $3);
         free($1);
     }
     | ID LBRACKET expr RBRACKET '=' expr ';' {
-        /* 1D Array assignment: arr[0] = 5; */
         $$ = createArrayAssign($1, $3, $6);
         free($1);
     }
     | ID LBRACKET expr RBRACKET LBRACKET expr RBRACKET '=' expr ';' {
-        /* 2D Array assignment: matrix[0][1] = 5; */
         $$ = createArray2DAssign($1, $3, $6, $9);
         free($1);
     }
     ;
 
-/* EXPRESSION RULES - Build expression trees */
+/* ============================================
+   EXPRESSIONS
+   ============================================ */
+
 expr:
-    NUM { 
-        /* Integer literal */
+    NUM {
         $$ = createNum($1);
     }
     | FLOAT_NUM {
-        /* Floating-point literal */
         $$ = createFloatNum($1);
     }
-    | ID { 
-        /* Variable reference */
+    | ID {
         $$ = createVar($1);
         free($1);
     }
-    | expr '+' expr { 
-        /* Addition operation */
+    | expr '+' expr {
         $$ = createBinOp('+', $1, $3);
     }
-    | expr '-' expr { 
-        /* Subtraction operation */
+    | expr '-' expr {
         $$ = createBinOp('-', $1, $3);
     }
-    | expr '*' expr { 
-        /* Multiplication operation */
+    | expr '*' expr {
         $$ = createBinOp('*', $1, $3);
     }
-    | expr '/' expr { 
-        /* Division operation */
+    | expr '/' expr {
         $$ = createBinOp('/', $1, $3);
     }
-    | expr '%' expr { 
-        /* Modulo operation */
+    | expr '%' expr {
         $$ = createBinOp('%', $1, $3);
     }
     | expr '<' expr {
-        /* Less-than comparison */
         $$ = createBinOp('<', $1, $3);
     }
     | expr '>' expr {
-        /* Greater-than comparison */
         $$ = createBinOp('>', $1, $3);
     }
-    | LPAREN expr RPAREN { 
-        /* Parenthesized expression */
+    | LPAREN expr RPAREN {
         $$ = $2;
     }
-    | LBRACE stmt_list RBRACE { 
-        /* Block of statements */
+    | LBRACE stmt_list RBRACE {
         $$ = $2;
     }
     | ID LBRACKET expr RBRACKET {
-        /* 1D Array access: arr[0] */
         $$ = createArrayAccess($1, $3);
         free($1);
     }
     | ID LBRACKET expr RBRACKET LBRACKET expr RBRACKET {
-        /* 2D Array access: matrix[0][1] */
         $$ = createArray2DAccess($1, $3, $6);
+        free($1);
+    }
+    | ID LPAREN expr RPAREN {
+        /* Function call with argument as expression */
+        $$ = createCallExpr($1, $3);
+        free($1);
+    }
+    | ID LPAREN RPAREN {
+        /* Function call without arguments as expression */
+        $$ = createCallExpr($1, NULL);
         free($1);
     }
     ;
 
-/* PRINT STATEMENT - "print(expr);" */
+/* PRINT STATEMENT */
 print_stmt:
-    PRINT LPAREN expr RPAREN ';' { 
-        /* Create print node with expression to print */
+    PRINT LPAREN expr RPAREN ';' {
         $$ = createPrint($3);
     }
     ;
 
-/* WHILE STATEMENT - "while (expr) stmt" or "while (expr) { stmt_list }" */
+/* WHILE STATEMENT */
 while_stmt:
     WHILE LPAREN expr RPAREN stmt {
         $$ = createWhile($3, $5);
@@ -205,10 +323,47 @@ while_stmt:
     }
     ;
 
-/* IF/ELSE grammar removed - if/else functionality disabled. */
+/* FOR STATEMENT */
+for_stmt:
+    FOR LPAREN ID '=' expr ';' expr ';' ID '=' expr RPAREN stmt {
+        ASTNode* init = createAssign($3, $5);
+        ASTNode* update = createAssign($9, $11);
+        $$ = createFor(init, $7, update, $13);
+        free($3);
+        free($9);
+    }
+    | FOR LPAREN ID '=' expr ';' expr ';' ID '=' expr RPAREN LBRACE stmt_list RBRACE {
+        ASTNode* init = createAssign($3, $5);
+        ASTNode* update = createAssign($9, $11);
+        $$ = createFor(init, $7, update, $14);
+        free($3);
+        free($9);
+    }
+    ;
+
+if_stmt:
+    IF LPAREN expr RPAREN stmt {
+        $$ = createIf($3, $5);
+    }
+    | IF LPAREN expr RPAREN LBRACE stmt_list RBRACE {
+        $$ = createIf($3, $6);
+    }
+    | IF LPAREN expr RPAREN stmt ELSE stmt {
+        $$ = createIfElse($3, $5, $7);
+    }
+    | IF LPAREN expr RPAREN LBRACE stmt_list RBRACE ELSE stmt {
+        $$ = createIfElse($3, $6, $9);
+    }
+    | IF LPAREN expr RPAREN stmt ELSE LBRACE stmt_list RBRACE {
+        $$ = createIfElse($3, $5, $8);
+    }
+    | IF LPAREN expr RPAREN LBRACE stmt_list RBRACE ELSE LBRACE stmt_list RBRACE {
+        $$ = createIfElse($3, $6, $10);
+    }
+    ;
+
 %%
 
-/* ERROR HANDLING - Called by Bison when syntax error detected */
 void yyerror(const char* s) {
     fprintf(stderr, "Syntax Error: %s\n", s);
 }
