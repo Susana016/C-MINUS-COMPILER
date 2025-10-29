@@ -97,8 +97,12 @@ char* generateTACExpr(ASTNode* node) {
                 appendTAC(createTAC(TAC_CMP_LT, left, right, temp));
             } else if (node->data.binop.op == '>') {
                 appendTAC(createTAC(TAC_CMP_GT, left, right, temp));
+            } else if (node->data.binop.op == '&') {
+                appendTAC(createTAC(TAC_AND, left, right, temp));
+            } else if (node->data.binop.op == '|') {
+                appendTAC(createTAC(TAC_OR, left, right, temp));
             }
-            
+
             return temp;
         }
         
@@ -374,6 +378,12 @@ void printTAC() {
             case TAC_CMP_GT:
                 printf("%s = %s > %s\n", curr->result, curr->arg1, curr->arg2);
                 break;
+            case TAC_AND:
+                printf("%s = %s && %s\n", curr->result, curr->arg1, curr->arg2);
+                break;
+            case TAC_OR:
+                printf("%s = %s || %s\n", curr->result, curr->arg1, curr->arg2);
+                break;
             case TAC_ASSIGN:
                 printf("%s = %s\n", curr->result, curr->arg1);
                 break;
@@ -425,17 +435,130 @@ int isFloat(const char* str) {
     return strchr(str, '.') != NULL;
 }
 
+int isConstant(const char* str) {
+    if (!str) return 0;
+    char* endptr;
+    strtod(str, &endptr);
+    return *endptr == '\0';
+}
+
+int evalConstantBool(const char* str) {
+    if (!str) return 0;
+    double val = atof(str);
+    return (val != 0.0) ? 1 : 0;
+}
+
 void optimizeTAC() {
-    /* Keep your existing optimization code */
     TACInstr* curr = tacList.head;
     while (curr) {
-        TACInstr* newInstr = createTAC(curr->op, curr->arg1, curr->arg2, curr->result);
-        appendOptimizedTAC(newInstr);
+        int optimized = 0;
+
+        // Constant folding for comparisons
+        if ((curr->op == TAC_CMP_LT || curr->op == TAC_CMP_GT) &&
+            isConstant(curr->arg1) && isConstant(curr->arg2)) {
+            int val1 = atoi(curr->arg1);
+            int val2 = atoi(curr->arg2);
+            int result = (curr->op == TAC_CMP_LT) ? (val1 < val2) : (val1 > val2);
+            char resultStr[20];
+            sprintf(resultStr, "%d", result);
+            appendOptimizedTAC(createTAC(TAC_ASSIGN, resultStr, NULL, curr->result));
+            optimized = 1;
+        }
+        // Short-circuit AND: FALSE && x = FALSE
+        else if (curr->op == TAC_AND && isConstant(curr->arg1) && !evalConstantBool(curr->arg1)) {
+            appendOptimizedTAC(createTAC(TAC_ASSIGN, "0", NULL, curr->result));
+            optimized = 1;
+        }
+        // Short-circuit AND: TRUE && x = x
+        else if (curr->op == TAC_AND && isConstant(curr->arg1) && evalConstantBool(curr->arg1)) {
+            appendOptimizedTAC(createTAC(TAC_ASSIGN, curr->arg2, NULL, curr->result));
+            optimized = 1;
+        }
+        // Short-circuit OR: TRUE || x = TRUE
+        else if (curr->op == TAC_OR && isConstant(curr->arg1) && evalConstantBool(curr->arg1)) {
+            appendOptimizedTAC(createTAC(TAC_ASSIGN, "1", NULL, curr->result));
+            optimized = 1;
+        }
+        // Short-circuit OR: FALSE || x = x
+        else if (curr->op == TAC_OR && isConstant(curr->arg1) && !evalConstantBool(curr->arg1)) {
+            appendOptimizedTAC(createTAC(TAC_ASSIGN, curr->arg2, NULL, curr->result));
+            optimized = 1;
+        }
+        // Constant folding for AND with both constants
+        else if (curr->op == TAC_AND && isConstant(curr->arg1) && isConstant(curr->arg2)) {
+            int result = evalConstantBool(curr->arg1) && evalConstantBool(curr->arg2);
+            char resultStr[20];
+            sprintf(resultStr, "%d", result);
+            appendOptimizedTAC(createTAC(TAC_ASSIGN, resultStr, NULL, curr->result));
+            optimized = 1;
+        }
+        // Constant folding for OR with both constants
+        else if (curr->op == TAC_OR && isConstant(curr->arg1) && isConstant(curr->arg2)) {
+            int result = evalConstantBool(curr->arg1) || evalConstantBool(curr->arg2);
+            char resultStr[20];
+            sprintf(resultStr, "%d", result);
+            appendOptimizedTAC(createTAC(TAC_ASSIGN, resultStr, NULL, curr->result));
+            optimized = 1;
+        }
+        // Constant folding for arithmetic
+        else if ((curr->op == TAC_ADD || curr->op == TAC_SUB || curr->op == TAC_MUL ||
+                  curr->op == TAC_DIV || curr->op == TAC_MOD) &&
+                 isConstant(curr->arg1) && isConstant(curr->arg2)) {
+            int val1 = atoi(curr->arg1);
+            int val2 = atoi(curr->arg2);
+            int result;
+            switch(curr->op) {
+                case TAC_ADD: result = val1 + val2; break;
+                case TAC_SUB: result = val1 - val2; break;
+                case TAC_MUL: result = val1 * val2; break;
+                case TAC_DIV: result = (val2 != 0) ? val1 / val2 : 0; break;
+                case TAC_MOD: result = (val2 != 0) ? val1 % val2 : 0; break;
+                default: result = 0;
+            }
+            char resultStr[20];
+            sprintf(resultStr, "%d", result);
+            appendOptimizedTAC(createTAC(TAC_ASSIGN, resultStr, NULL, curr->result));
+            optimized = 1;
+        }
+
+        if (!optimized) {
+            appendOptimizedTAC(createTAC(curr->op, curr->arg1, curr->arg2, curr->result));
+        }
         curr = curr->next;
     }
 }
 
 void printOptimizedTAC() {
-    /* Just copy from printTAC for now */
-    printTAC();
+    printf("Optimized TAC Instructions:\n");
+    printf("---------------------------\n");
+    TACInstr* curr = optimizedList.head;
+    int lineNum = 1;
+    while (curr) {
+        printf("%2d: ", lineNum++);
+        switch(curr->op) {
+            case TAC_FUNC_BEGIN: printf("FUNC_BEGIN %s\n", curr->result); break;
+            case TAC_FUNC_END: printf("FUNC_END %s\n", curr->result); break;
+            case TAC_PARAM: printf("PARAM %s\n", curr->arg1); break;
+            case TAC_CALL: printf("%s = CALL %s\n", curr->result, curr->arg1); break;
+            case TAC_RETURN: printf("RETURN %s\n", curr->arg1 ? curr->arg1 : "(void)"); break;
+            case TAC_DECL: printf("DECL %s\n", curr->result); break;
+            case TAC_ADD: printf("%s = %s + %s\n", curr->result, curr->arg1, curr->arg2); break;
+            case TAC_SUB: printf("%s = %s - %s\n", curr->result, curr->arg1, curr->arg2); break;
+            case TAC_MUL: printf("%s = %s * %s\n", curr->result, curr->arg1, curr->arg2); break;
+            case TAC_DIV: printf("%s = %s / %s\n", curr->result, curr->arg1, curr->arg2); break;
+            case TAC_MOD: printf("%s = %s %% %s\n", curr->result, curr->arg1, curr->arg2); break;
+            case TAC_CMP_LT: printf("%s = %s < %s\n", curr->result, curr->arg1, curr->arg2); break;
+            case TAC_CMP_GT: printf("%s = %s > %s\n", curr->result, curr->arg1, curr->arg2); break;
+            case TAC_AND: printf("%s = %s && %s\n", curr->result, curr->arg1, curr->arg2); break;
+            case TAC_OR: printf("%s = %s || %s\n", curr->result, curr->arg1, curr->arg2); break;
+            case TAC_ASSIGN: printf("%s = %s\n", curr->result, curr->arg1); break;
+            case TAC_PRINT: printf("PRINT %s\n", curr->arg1); break;
+            case TAC_GOTO: printf("GOTO %s\n", curr->result); break;
+            case TAC_IF_FALSE: printf("IF_FALSE %s GOTO %s\n", curr->arg1, curr->result); break;
+            case TAC_LABEL: printf("LABEL %s:\n", curr->result); break;
+            case TAC_ARRAY_ACCESS: printf("%s = %s\n", curr->result, curr->arg1); break;
+            default: printf("<unknown tac op>\n"); break;
+        }
+        curr = curr->next;
+    }
 }

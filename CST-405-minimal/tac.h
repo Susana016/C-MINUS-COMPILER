@@ -18,6 +18,8 @@ typedef enum {
     TAC_MOD,     /* Modulo: result = arg1 % arg2 */
     TAC_CMP_LT,  /* Comparison less-than: result = arg1 < arg2 (0/1) */
     TAC_CMP_GT,  /* Comparison greater-than: result = arg1 > arg2 (0/1) */
+    TAC_AND,     /* Logical AND: result = arg1 && arg2 (0/1) */
+    TAC_OR,      /* Logical OR: result = arg1 || arg2 (0/1) */
     TAC_ASSIGN,  /* Assignment: result = arg1 */
     TAC_PRINT,   /* Print: print(arg1) */
     TAC_DECL,    /* Declaration: declare result */

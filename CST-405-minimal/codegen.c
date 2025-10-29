@@ -81,6 +81,17 @@ void genExpr(ASTNode* node) {
                     // Greater than: result is 1 if left > right, 0 otherwise
                     fprintf(output, "    slt $t%d, $t%d, $t%d\n", leftReg, rightReg, leftReg);
                     break;
+                case '&':
+                    // Logical AND: result is 1 if both are non-zero, 0 otherwise
+                    fprintf(output, "    sne $t%d, $t%d, $zero\n", leftReg, leftReg);
+                    fprintf(output, "    sne $t%d, $t%d, $zero\n", rightReg, rightReg);
+                    fprintf(output, "    and $t%d, $t%d, $t%d\n", leftReg, leftReg, rightReg);
+                    break;
+                case '|':
+                    // Logical OR: result is 1 if either is non-zero, 0 otherwise
+                    fprintf(output, "    or $t%d, $t%d, $t%d\n", leftReg, leftReg, rightReg);
+                    fprintf(output, "    sne $t%d, $t%d, $zero\n", leftReg, leftReg);
+                    break;
             }
 
             tempReg = leftReg + 1;

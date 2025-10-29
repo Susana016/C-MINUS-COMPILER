@@ -49,6 +49,8 @@
 "="             { return '='; }
 "<"             { return '<'; }
 ">"             { return '>'; }
+"&&"            { return AND; }
+"||"            { return OR; }
 ";"             { return ';'; }
 "("             { return LPAREN; }  
 ")"             { return RPAREN; }   
