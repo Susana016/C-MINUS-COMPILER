@@ -9,7 +9,11 @@
       "Bash(cat:*)",
       "Bash(bison:*)",
       "Bash(flex:*)",
-      "Bash(make:*)"
+      "Bash(make:*)",
+      "Read(//c/Users/Soren/OneDrive/Documents/school/College Senior/CST-405/Compiler/GroupGitHub/CST-405/**)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": []

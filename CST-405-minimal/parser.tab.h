@@ -73,7 +73,9 @@ extern int yydebug;
     RPAREN = 274,                  /* RPAREN  */
     LBRACKET = 275,                /* LBRACKET  */
     RBRACKET = 276,                /* RBRACKET  */
-    COMMA = 277                    /* COMMA  */
+    COMMA = 277,                   /* COMMA  */
+    AND = 278,                     /* AND  */
+    OR = 279                       /* OR  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -89,7 +91,7 @@ union YYSTYPE
     char* str;
     struct ASTNode* node;
 
-#line 93 "parser.tab.h"
+#line 95 "parser.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;
