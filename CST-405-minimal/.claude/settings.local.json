@@ -13,7 +13,14 @@
       "Read(//c/Users/Soren/OneDrive/Documents/school/College Senior/CST-405/Compiler/GroupGitHub/CST-405/**)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(make)",
+      "Bash(.minicompiler.exe comprehensive_test.c output_comprehensive.s)",
+      "Bash(minicompiler.exe:*)",
+      "Bash(dir:*)",
+      "Bash(cmd /c \"minicompiler.exe comprehensive_test.c output_comprehensive.s\")",
+      "Bash(./minicompiler:*)",
+      "Bash(make test-file:*)"
     ],
     "deny": [],
     "ask": []

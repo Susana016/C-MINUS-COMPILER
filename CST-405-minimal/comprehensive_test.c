@@ -58,11 +58,65 @@ int main() {
     int complex = gx * 2 + arr[1] / 2 - mod;
     print(complex);
 
+    /* Simple if statement test */
     int testVal = 7;
-    if (testVal > 7) {
+    if (testVal > 5) {
         print(100);
-    } else {
+    }
+
+    /* If-else statement test */
+    if (testVal > 7) {
         print(200);
+    } else {
+        print(300);
+    }
+
+    /* Nested if statements test */
+    int x = 10;
+    int y = 20;
+    if (x < y) {
+        if (x > 5) {
+            print(400);
+        } else {
+            print(500);
+        }
+    } else {
+        print(600);
+    }
+
+    /* Logical AND operator test */
+    int a = 1;
+    int b = 1;
+    if (a && b) {
+        print(700);
+    }
+
+    /* Logical OR operator test */
+    int c = 0;
+    int d = 1;
+    if (c || d) {
+        print(800);
+    }
+
+    /* Logical NOT operator test */
+    int e = 0;
+    if (!e) {
+        print(900);
+    }
+
+    /* Complex boolean expression test */
+    int p = 1;
+    int q = 0;
+    int r = 1;
+    if ((p && r) || q) {
+        print(1000);
+    }
+
+    /* Nested if with logical operators */
+    if (p && !q) {
+        if (r || q) {
+            print(1100);
+        }
     }
 
     int forSum = 0;

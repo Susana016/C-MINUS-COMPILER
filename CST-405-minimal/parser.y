@@ -29,7 +29,8 @@ ASTNode* root = NULL;
 %token <str> ID
 %token INT DOUBLE PRINT WHILE FOR IF ELSE VOID RETURN MAIN
 %token LBRACE RBRACE LPAREN RPAREN LBRACKET RBRACKET COMMA
-%token AND OR
+/* Logical operators */
+%token AND OR NOT
 
 /* NON-TERMINAL TYPES */
 %type <node> program function_list function_decl param_list
@@ -39,6 +40,7 @@ ASTNode* root = NULL;
 /* OPERATOR PRECEDENCE */
 %left OR
 %left AND
+%right NOT
 %left '<' '>'
 %left '+' '-'
 %left '*' '/' '%'
@@ -288,6 +290,10 @@ expr:
     }
     | expr OR expr {
         $$ = createBinOp('|', $1, $3);
+    }
+    | NOT expr {
+        /* Logical NOT unary operator */
+        $$ = createBinOp('!', $2, NULL);
     }
     | LPAREN expr RPAREN {
         $$ = $2;

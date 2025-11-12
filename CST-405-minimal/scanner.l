@@ -14,6 +14,8 @@
 
 %%
 
+"/*"([^*]|\*+[^*/])*\*+"/"  { }
+
 "int"           { return INT; }
 "double"        { return DOUBLE; }
 "print"         { return PRINT; }
@@ -49,6 +51,7 @@
 "="             { return '='; }
 "<"             { return '<'; }
 ">"             { return '>'; }
+"!"             { return NOT; }
 "&&"            { return AND; }
 "||"            { return OR; }
 ";"             { return ';'; }

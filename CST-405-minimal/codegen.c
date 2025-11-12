@@ -50,6 +50,14 @@ void genExpr(ASTNode* node) {
         }
         
         case NODE_BINOP:
+            /* Handle unary NOT operator */
+            if (node->data.binop.op == '!' && node->data.binop.right == NULL) {
+                genExpr(node->data.binop.left);
+                int reg = tempReg - 1;
+                fprintf(output, "    seq $t%d, $t%d, $zero\n", reg, reg);
+                break;
+            }
+
             genExpr(node->data.binop.left);
             int leftReg = tempReg - 1;
             genExpr(node->data.binop.right);
@@ -171,8 +179,9 @@ void genExpr(ASTNode* node) {
 
 void genStmt(ASTNode* node) {
     if (!node) return;
-    
-    static int ifLabelCounter = 0; /* -------- ADDITIONS PROJECT 2 --------*/
+
+    /* Shared counter for all if/if-else statements to prevent duplicate labels */
+    static int globalIfCounter = 0;
 
     switch(node->type) {
         case NODE_DECL: {
@@ -285,8 +294,7 @@ void genStmt(ASTNode* node) {
 
         case NODE_IF: {
             /* if (cond) then */
-            static int ifCounter = 0;
-            int id = ifCounter++;
+            int id = globalIfCounter++;
 
             genExpr(node->data.ifstmt.condition);
             fprintf(output, "    # if condition result in $t%d\n", tempReg - 1);
@@ -300,8 +308,7 @@ void genStmt(ASTNode* node) {
 
         case NODE_IF_ELSE: {
             /* if (cond) then else */
-            static int ifElseCounter = 0;
-            int id = ifElseCounter++;
+            int id = globalIfCounter++;
 
             genExpr(node->data.ifstmt.condition);
             fprintf(output, "    # if-else condition result in $t%d\n", tempReg - 1);

@@ -80,10 +80,13 @@ char* generateTACExpr(ASTNode* node) {
         
         case NODE_BINOP: {
             char* left = generateTACExpr(node->data.binop.left);
-            char* right = generateTACExpr(node->data.binop.right);
+            char* right = node->data.binop.right ? generateTACExpr(node->data.binop.right) : NULL;
             char* temp = newTemp();
-            
-            if (node->data.binop.op == '+') {
+
+            /* Handle unary NOT operator */
+            if (node->data.binop.op == '!') {
+                appendTAC(createTAC(TAC_NOT, left, NULL, temp));
+            } else if (node->data.binop.op == '+') {
                 appendTAC(createTAC(TAC_ADD, left, right, temp));
             } else if (node->data.binop.op == '-') {
                 appendTAC(createTAC(TAC_SUB, left, right, temp));
@@ -321,7 +324,34 @@ void generateTAC(ASTNode* node) {
         case NODE_GLOBAL_ARRAY_2D_DECL:
             appendTAC(createTAC(TAC_DECL, NULL, NULL, node->data.array_2d_decl.name));
             break;
-            
+
+        /* If statement: if (cond) then */
+        case NODE_IF: {
+            char* labelEnd = newLabel();
+            char* condTemp = generateTACExpr(node->data.ifstmt.condition);
+            appendTAC(createTAC(TAC_IF_FALSE, condTemp, NULL, labelEnd));
+            generateTAC(node->data.ifstmt.thenBlock);
+            appendTAC(createTAC(TAC_LABEL, NULL, NULL, labelEnd));
+            free(labelEnd);
+            break;
+        }
+
+        /* If-else statement: if (cond) then else */
+        case NODE_IF_ELSE: {
+            char* labelElse = newLabel();
+            char* labelEnd = newLabel();
+            char* condTemp = generateTACExpr(node->data.ifstmt.condition);
+            appendTAC(createTAC(TAC_IF_FALSE, condTemp, NULL, labelElse));
+            generateTAC(node->data.ifstmt.thenBlock);
+            appendTAC(createTAC(TAC_GOTO, NULL, NULL, labelEnd));
+            appendTAC(createTAC(TAC_LABEL, NULL, NULL, labelElse));
+            generateTAC(node->data.ifstmt.elseBlock);
+            appendTAC(createTAC(TAC_LABEL, NULL, NULL, labelEnd));
+            free(labelElse);
+            free(labelEnd);
+            break;
+        }
+
         default:
             break;
     }
@@ -383,6 +413,9 @@ void printTAC() {
                 break;
             case TAC_OR:
                 printf("%s = %s || %s\n", curr->result, curr->arg1, curr->arg2);
+                break;
+            case TAC_NOT:
+                printf("%s = !%s\n", curr->result, curr->arg1);
                 break;
             case TAC_ASSIGN:
                 printf("%s = %s\n", curr->result, curr->arg1);
@@ -453,8 +486,16 @@ void optimizeTAC() {
     while (curr) {
         int optimized = 0;
 
+        // Constant folding for NOT operator
+        if (curr->op == TAC_NOT && isConstant(curr->arg1)) {
+            int result = !evalConstantBool(curr->arg1);
+            char resultStr[20];
+            sprintf(resultStr, "%d", result);
+            appendOptimizedTAC(createTAC(TAC_ASSIGN, resultStr, NULL, curr->result));
+            optimized = 1;
+        }
         // Constant folding for comparisons
-        if ((curr->op == TAC_CMP_LT || curr->op == TAC_CMP_GT) &&
+        else if ((curr->op == TAC_CMP_LT || curr->op == TAC_CMP_GT) &&
             isConstant(curr->arg1) && isConstant(curr->arg2)) {
             int val1 = atoi(curr->arg1);
             int val2 = atoi(curr->arg2);
@@ -551,6 +592,7 @@ void printOptimizedTAC() {
             case TAC_CMP_GT: printf("%s = %s > %s\n", curr->result, curr->arg1, curr->arg2); break;
             case TAC_AND: printf("%s = %s && %s\n", curr->result, curr->arg1, curr->arg2); break;
             case TAC_OR: printf("%s = %s || %s\n", curr->result, curr->arg1, curr->arg2); break;
+            case TAC_NOT: printf("%s = !%s\n", curr->result, curr->arg1); break;
             case TAC_ASSIGN: printf("%s = %s\n", curr->result, curr->arg1); break;
             case TAC_PRINT: printf("PRINT %s\n", curr->arg1); break;
             case TAC_GOTO: printf("GOTO %s\n", curr->result); break;
