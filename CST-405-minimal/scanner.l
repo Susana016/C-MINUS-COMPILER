@@ -26,6 +26,7 @@
 "return"        { return RETURN; }
 "void"          { return VOID; }
 "main"          { return MAIN; }
+"is"            { return IS; }
 
 [a-zA-Z_][a-zA-Z0-9_]* { 
     yylval.str = strdup(yytext);
@@ -48,6 +49,7 @@
 "*"             { return '*'; }
 "/"             { return '/'; }
 "%"             { return '%'; }
+"=="            { return EQ; }
 "="             { return '='; }
 "<"             { return '<'; }
 ">"             { return '>'; }
@@ -57,11 +59,12 @@
 ";"             { return ';'; }
 "("             { return LPAREN; }  
 ")"             { return RPAREN; }   
-"{"             { return LBRACE; }   
-"}"             { return RBRACE; } 
+"{"             { return LBRACE; }
+"}"             { return RBRACE; }
 "["             { return LBRACKET; }
 "]"             { return RBRACKET; }
-  
+","             { return COMMA; }
+
 
 
 [ \t\n]         { }

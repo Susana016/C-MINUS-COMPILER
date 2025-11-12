@@ -89,6 +89,10 @@ void genExpr(ASTNode* node) {
                     // Greater than: result is 1 if left > right, 0 otherwise
                     fprintf(output, "    slt $t%d, $t%d, $t%d\n", leftReg, rightReg, leftReg);
                     break;
+                case '=':
+                    // Equality: result is 1 if left == right, 0 otherwise
+                    fprintf(output, "    seq $t%d, $t%d, $t%d\n", leftReg, leftReg, rightReg);
+                    break;
                 case '&':
                     // Logical AND: result is 1 if both are non-zero, 0 otherwise
                     fprintf(output, "    sne $t%d, $t%d, $zero\n", leftReg, leftReg);
@@ -169,6 +173,61 @@ void genExpr(ASTNode* node) {
             // Move result to next temp register
             int resultReg = getNextTemp();
             fprintf(output, "    move $t%d, $v0\n", resultReg);
+            break;
+        }
+
+        case NODE_MULTI_VALUE_CHECK: {
+            /* Multi-value equality check: expr is val1, val2, val3
+             * Generates: (expr == val1) || (expr == val2) || (expr == val3)
+             * Uses stack to preserve the expression value across multiple comparisons
+             */
+            fprintf(output, "    # Multi-value check: expr is values...\n");
+
+            // Generate code for the expression being checked
+            genExpr(node->data.multiValueCheck.expr);
+            int exprReg = tempReg - 1;
+
+            // Save expression value to stack to prevent register clobbering
+            fprintf(output, "    addi $sp, $sp, -4\n");
+            fprintf(output, "    sw $t%d, 0($sp)\n", exprReg);
+
+            // Process value list and build OR chain
+            ASTNode* valueNode = node->data.multiValueCheck.values;
+            int resultReg = -1;
+            int firstComparison = 1;
+
+            while (valueNode != NULL) {
+                // Reload expression from stack
+                fprintf(output, "    lw $t0, 0($sp)\n");
+
+                // Generate code for current value
+                genExpr(valueNode->data.valueList.value);
+                int valueReg = (tempReg == 0) ? 7 : (tempReg - 1);
+
+                // Compare: savedExpr == value
+                int cmpReg = getNextTemp();
+                fprintf(output, "    seq $t%d, $t0, $t%d\n", cmpReg, valueReg);
+
+                if (firstComparison) {
+                    // First comparison becomes the initial result
+                    resultReg = cmpReg;
+                    firstComparison = 0;
+                } else {
+                    // OR this comparison with previous result
+                    int orReg = getNextTemp();
+                    fprintf(output, "    or $t%d, $t%d, $t%d\n", orReg, resultReg, cmpReg);
+                    fprintf(output, "    sne $t%d, $t%d, $zero\n", orReg, orReg);
+                    resultReg = orReg;
+                }
+
+                // Move to next value
+                valueNode = valueNode->data.valueList.next;
+            }
+
+            // Restore stack pointer
+            fprintf(output, "    addi $sp, $sp, 4\n");
+
+            tempReg = resultReg + 1;
             break;
         }
 

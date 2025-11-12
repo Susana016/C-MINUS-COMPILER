@@ -30,18 +30,21 @@ ASTNode* root = NULL;
 %token INT DOUBLE PRINT WHILE FOR IF ELSE VOID RETURN MAIN
 %token LBRACE RBRACE LPAREN RPAREN LBRACKET RBRACKET COMMA
 /* Logical operators */
-%token AND OR NOT
+%token AND OR NOT EQ
+/* Multi-value equality */
+%token IS
 
 /* NON-TERMINAL TYPES */
 %type <node> program function_list function_decl param_list
 %type <node> global_decl_list global_decl
 %type <node> stmt_list stmt decl assign expr print_stmt while_stmt for_stmt if_stmt
+%type <node> value_list
 
 /* OPERATOR PRECEDENCE */
 %left OR
 %left AND
 %right NOT
-%left '<' '>'
+%left EQ '<' '>'
 %left '+' '-'
 %left '*' '/' '%'
 
@@ -285,6 +288,9 @@ expr:
     | expr '>' expr {
         $$ = createBinOp('>', $1, $3);
     }
+    | expr EQ expr {
+        $$ = createBinOp('=', $1, $3);
+    }
     | expr AND expr {
         $$ = createBinOp('&', $1, $3);
     }
@@ -318,6 +324,10 @@ expr:
         /* Function call without arguments as expression */
         $$ = createCallExpr($1, NULL);
         free($1);
+    }
+    | expr IS value_list {
+        /* Multi-value equality check: expr is val1, val2, val3 */
+        $$ = createMultiValueCheck($1, $3);
     }
     ;
 
@@ -374,6 +384,18 @@ if_stmt:
     }
     | IF LPAREN expr RPAREN LBRACE stmt_list RBRACE ELSE LBRACE stmt_list RBRACE {
         $$ = createIfElse($3, $6, $10);
+    }
+    ;
+
+/* VALUE LIST for multi-value equality check */
+value_list:
+    expr {
+        /* Single value */
+        $$ = createValueList($1, NULL);
+    }
+    | expr COMMA value_list {
+        /* Multiple values */
+        $$ = createValueList($1, $3);
     }
     ;
 

@@ -100,6 +100,8 @@ char* generateTACExpr(ASTNode* node) {
                 appendTAC(createTAC(TAC_CMP_LT, left, right, temp));
             } else if (node->data.binop.op == '>') {
                 appendTAC(createTAC(TAC_CMP_GT, left, right, temp));
+            } else if (node->data.binop.op == '=') {
+                appendTAC(createTAC(TAC_CMP_EQ, left, right, temp));
             } else if (node->data.binop.op == '&') {
                 appendTAC(createTAC(TAC_AND, left, right, temp));
             } else if (node->data.binop.op == '|') {
@@ -137,20 +139,57 @@ char* generateTACExpr(ASTNode* node) {
             // Generate PARAM instructions for arguments
             ASTNode* arg = node->data.call_expr.args;
             int paramCount = 0;
-            
+
             while (arg) {
                 char* argVal = generateTACExpr(arg);
                 appendTAC(createTAC(TAC_PARAM, argVal, NULL, NULL));
                 paramCount++;
                 arg = NULL; // Single argument for now
             }
-            
+
             // Generate CALL and return temp holding result
             char* temp = newTemp();
             appendTAC(createTAC(TAC_CALL, node->data.call_expr.funcName, NULL, temp));
             return temp;
         }
-        
+
+        /* Multi-value equality check: expr is val1, val2, val3, ...
+         * Desugars to: (expr == val1) || (expr == val2) || (expr == val3) || ...
+         */
+        case NODE_MULTI_VALUE_CHECK: {
+            // Generate TAC for the expression being checked
+            char* exprTemp = generateTACExpr(node->data.multiValueCheck.expr);
+
+            // Process the value list and build OR chain
+            ASTNode* valueNode = node->data.multiValueCheck.values;
+            char* resultTemp = NULL;
+
+            while (valueNode != NULL) {
+                // Generate TAC for the current value
+                char* valueTemp = generateTACExpr(valueNode->data.valueList.value);
+
+                // Create equality comparison: exprTemp == valueTemp
+                char* eqTemp = newTemp();
+                appendTAC(createTAC(TAC_CMP_EQ, exprTemp, valueTemp, eqTemp));
+
+                // OR with previous results
+                if (resultTemp == NULL) {
+                    // First comparison becomes the initial result
+                    resultTemp = eqTemp;
+                } else {
+                    // OR this comparison with previous results
+                    char* orTemp = newTemp();
+                    appendTAC(createTAC(TAC_OR, resultTemp, eqTemp, orTemp));
+                    resultTemp = orTemp;
+                }
+
+                // Move to next value in the list
+                valueNode = valueNode->data.valueList.next;
+            }
+
+            return resultTemp;
+        }
+
         default:
             return NULL;
     }
@@ -408,6 +447,9 @@ void printTAC() {
             case TAC_CMP_GT:
                 printf("%s = %s > %s\n", curr->result, curr->arg1, curr->arg2);
                 break;
+            case TAC_CMP_EQ:
+                printf("%s = %s == %s\n", curr->result, curr->arg1, curr->arg2);
+                break;
             case TAC_AND:
                 printf("%s = %s && %s\n", curr->result, curr->arg1, curr->arg2);
                 break;
@@ -495,11 +537,14 @@ void optimizeTAC() {
             optimized = 1;
         }
         // Constant folding for comparisons
-        else if ((curr->op == TAC_CMP_LT || curr->op == TAC_CMP_GT) &&
+        else if ((curr->op == TAC_CMP_LT || curr->op == TAC_CMP_GT || curr->op == TAC_CMP_EQ) &&
             isConstant(curr->arg1) && isConstant(curr->arg2)) {
             int val1 = atoi(curr->arg1);
             int val2 = atoi(curr->arg2);
-            int result = (curr->op == TAC_CMP_LT) ? (val1 < val2) : (val1 > val2);
+            int result;
+            if (curr->op == TAC_CMP_LT) result = (val1 < val2);
+            else if (curr->op == TAC_CMP_GT) result = (val1 > val2);
+            else result = (val1 == val2);
             char resultStr[20];
             sprintf(resultStr, "%d", result);
             appendOptimizedTAC(createTAC(TAC_ASSIGN, resultStr, NULL, curr->result));
@@ -590,6 +635,7 @@ void printOptimizedTAC() {
             case TAC_MOD: printf("%s = %s %% %s\n", curr->result, curr->arg1, curr->arg2); break;
             case TAC_CMP_LT: printf("%s = %s < %s\n", curr->result, curr->arg1, curr->arg2); break;
             case TAC_CMP_GT: printf("%s = %s > %s\n", curr->result, curr->arg1, curr->arg2); break;
+            case TAC_CMP_EQ: printf("%s = %s == %s\n", curr->result, curr->arg1, curr->arg2); break;
             case TAC_AND: printf("%s = %s && %s\n", curr->result, curr->arg1, curr->arg2); break;
             case TAC_OR: printf("%s = %s || %s\n", curr->result, curr->arg1, curr->arg2); break;
             case TAC_NOT: printf("%s = !%s\n", curr->result, curr->arg1); break;

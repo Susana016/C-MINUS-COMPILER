@@ -41,7 +41,11 @@ typedef enum {
     NODE_PARAMETER,
     NODE_RETURN,
     NODE_CALL,
-    NODE_CALL_EXPR
+    NODE_CALL_EXPR,
+
+    /* Multi-value equality check */
+    NODE_MULTI_VALUE_CHECK,
+    NODE_VALUE_LIST
 } NodeType;
 
 /* Forward declaration */
@@ -173,6 +177,16 @@ struct ASTNode {
             char* name;
         } gotostmt;
 
+        struct {
+            struct ASTNode* expr;      /* Expression to check */
+            struct ASTNode* values;    /* List of values to compare against */
+        } multiValueCheck;
+
+        struct {
+            struct ASTNode* value;     /* Current value */
+            struct ASTNode* next;      /* Next value in list */
+        } valueList;
+
     } data;
 };
 
@@ -221,7 +235,11 @@ ASTNode* createCallExpr(char* funcName, ASTNode* args);
 ASTNode* createIf(ASTNode* condition, ASTNode* thenBlock);
 ASTNode* createIfElse(ASTNode* condition, ASTNode* thenBlock, ASTNode* elseBlock);
 ASTNode* createLabel(char* name);
-ASTNode* createGoto(char* name);    
+ASTNode* createGoto(char* name);
+
+/* Multi-value equality check */
+ASTNode* createMultiValueCheck(ASTNode* expr, ASTNode* values);
+ASTNode* createValueList(ASTNode* value, ASTNode* next);
 
 /* Display function */
 void printAST(ASTNode* node, int level);

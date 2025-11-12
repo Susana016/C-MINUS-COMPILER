@@ -18,6 +18,7 @@ typedef enum {
     TAC_MOD,     /* Modulo: result = arg1 % arg2 */
     TAC_CMP_LT,  /* Comparison less-than: result = arg1 < arg2 (0/1) */
     TAC_CMP_GT,  /* Comparison greater-than: result = arg1 > arg2 (0/1) */
+    TAC_CMP_EQ,  /* Comparison equal: result = arg1 == arg2 (0/1) */
     TAC_AND,     /* Logical AND: result = arg1 && arg2 (0/1) */
     TAC_OR,      /* Logical OR: result = arg1 || arg2 (0/1) */
     TAC_NOT,     /* Logical NOT: result = !arg1 (0/1) */

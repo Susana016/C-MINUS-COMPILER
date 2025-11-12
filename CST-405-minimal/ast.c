@@ -303,6 +303,24 @@ ASTNode* createGoto(char* name) {
     return node;
 }
 
+/* Create a multi-value equality check node */
+ASTNode* createMultiValueCheck(ASTNode* expr, ASTNode* values) {
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_MULTI_VALUE_CHECK;
+    node->data.multiValueCheck.expr = expr;
+    node->data.multiValueCheck.values = values;
+    return node;
+}
+
+/* Create a value list node */
+ASTNode* createValueList(ASTNode* value, ASTNode* next) {
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_VALUE_LIST;
+    node->data.valueList.value = value;
+    node->data.valueList.next = next;
+    return node;
+}
+
 
 /* Display the AST structure (for debugging and education) */
 void printAST(ASTNode* node, int level) {
@@ -530,6 +548,25 @@ void printAST(ASTNode* node, int level) {
             for (int i = 0; i < level + 1; i++) printf("  ");
             printf("Else:\n");
             printAST(node->data.ifstmt.elseBlock, level + 2);
+            break;
+
+        case NODE_MULTI_VALUE_CHECK:
+            printf("MULTI_VALUE_CHECK (is)\n");
+            for (int i = 0; i < level + 1; i++) printf("  ");
+            printf("Expression:\n");
+            printAST(node->data.multiValueCheck.expr, level + 2);
+            for (int i = 0; i < level + 1; i++) printf("  ");
+            printf("Values:\n");
+            printAST(node->data.multiValueCheck.values, level + 2);
+            break;
+
+        case NODE_VALUE_LIST:
+            printf("VALUE: ");
+            printAST(node->data.valueList.value, 0);
+            if (node->data.valueList.next) {
+                for (int i = 0; i < level; i++) printf("  ");
+                printAST(node->data.valueList.next, level);
+            }
             break;
 
         default:
