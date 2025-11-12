@@ -15,6 +15,8 @@
 %%
 
 "/*"([^*]|\*+[^*/])*\*+"/"  { }
+"//".*          { /* ignore single-line comments */ }
+
 
 "int"           { return INT; }
 "double"        { return DOUBLE; }
