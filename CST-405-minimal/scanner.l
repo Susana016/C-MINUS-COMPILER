@@ -15,6 +15,8 @@
 %%
 
 "/*"([^*]|\*+[^*/])*\*+"/"  { }
+"//".*          { /* ignore single-line comments */ }
+
 
 "int"           { return INT; }
 "double"        { return DOUBLE; }
@@ -61,7 +63,7 @@
 "}"             { return RBRACE; } 
 "["             { return LBRACKET; }
 "]"             { return RBRACKET; }
-  
+
 
 
 [ \t\n]         { }

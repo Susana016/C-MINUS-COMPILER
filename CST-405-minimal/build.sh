@@ -26,13 +26,13 @@ if [ $? -eq 0 ]; then
     echo ""
     echo "Running test with arrays..."
   #  ./minicompiler test.c output.s
-   # ./minicompiler while_test.c output_while.s#
-   ./minicompiler new_test.c new_test.s
-    
+   # ./minicompiler while_test.c output_while.s
+   ./minicompiler test_logical_ops.c test.s
+
     echo ""
-    echo "Generated MIPS code saved to output.s"
-    echo "You can run it with: mars output.s"
-    echo "or: spim -file output.s"
+    echo "Generated MIPS code saved to comprehensive.s"
+    echo "You can run it with: mars comprehensive.s"
+    echo "or: spim -file comprehensive.s"
 else
     echo "✗ Build failed!"
     exit 1
