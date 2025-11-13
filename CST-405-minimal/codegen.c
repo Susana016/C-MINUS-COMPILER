@@ -644,6 +644,85 @@ void genStmt(ASTNode* node) {
             break;
         }
 
+        case NODE_SWITCH: {
+            /* switch (expr) { case val: ... } */
+            static int switchCounter = 0;
+            int id = switchCounter++;
+
+            // Evaluate the switch expression
+            genExpr(node->data.switchstmt.expr);
+            int exprReg = tempReg - 1;
+            fprintf(output, "    # switch expression result in $t%d\n", exprReg);
+
+            // Create end label for the entire switch
+            char endLabel[20];
+            sprintf(endLabel, "Lend_switch_%d", id);
+
+            // First pass: generate comparisons for all cases
+            ASTNode* caseNode = node->data.switchstmt.cases;
+            int caseNum = 0;
+            int hasDefault = 0;
+
+            while (caseNode) {
+                if (caseNode->type == NODE_CASE) {
+                    // Generate comparison for this case
+                    fprintf(output, "    # case %d:\n", caseNode->data.casestmt.value);
+                    fprintf(output, "    li $t%d, %d\n", getNextTemp(), caseNode->data.casestmt.value);
+                    int valueReg = tempReg - 1;
+                    fprintf(output, "    beq $t%d, $t%d, Lcase_%d_%d\n", exprReg, valueReg, id, caseNum);
+                    caseNum++;
+                    caseNode = caseNode->data.casestmt.next;
+                } else if (caseNode->type == NODE_DEFAULT) {
+                    hasDefault = 1;
+                    // DEFAULT doesn't have a next field, it's the end of the list
+                    break;
+                } else {
+                    break;
+                }
+            }
+
+            // If no case matched, jump to default or end
+            if (hasDefault) {
+                fprintf(output, "    j Ldefault_%d\n", id);
+            } else {
+                fprintf(output, "    j %s\n", endLabel);
+            }
+
+            // Second pass: generate code for each case body
+            caseNode = node->data.switchstmt.cases;
+            caseNum = 0;
+            while (caseNode) {
+                if (caseNode->type == NODE_CASE) {
+                    fprintf(output, "Lcase_%d_%d:\n", id, caseNum);
+                    if (caseNode->data.casestmt.body) {
+                        genStmt(caseNode->data.casestmt.body);
+                    }
+                    fprintf(output, "    j %s\n", endLabel);
+                    caseNum++;
+                    caseNode = caseNode->data.casestmt.next;
+                } else if (caseNode->type == NODE_DEFAULT) {
+                    fprintf(output, "Ldefault_%d:\n", id);
+                    if (caseNode->data.defaultstmt.body) {
+                        genStmt(caseNode->data.defaultstmt.body);
+                    }
+                    fprintf(output, "    j %s\n", endLabel);
+                    // DEFAULT doesn't have a next field, it's the end of the list
+                    break;
+                } else {
+                    break;
+                }
+            }
+
+            fprintf(output, "%s:\n", endLabel);
+            tempReg = 0;
+            break;
+        }
+
+        case NODE_BREAK:
+            // Break is handled by jumps to end labels in switch/while/for
+            // No code generation needed here as it's implicit in the control flow
+            break;
+
         default:
             break;
     }
@@ -688,7 +767,8 @@ void generateMIPS(ASTNode* root, const char* filename) {
             // Old style: generate everything inline
             fprintf(output, "main:\n");
             fprintf(output, "    # Allocate stack space\n");
-            fprintf(output, "    addi $sp, $sp, -400\n\n");
+            fprintf(output, "    addi $sp, $sp, -400\n");
+            fprintf(output, "    move $s7, $sp    # Save global base pointer in $s7\n\n");
 
             // Process globals
             if (root->data.program.globals) {
