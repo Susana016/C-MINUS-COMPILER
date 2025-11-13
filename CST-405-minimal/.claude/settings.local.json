@@ -20,7 +20,10 @@
       "Bash(dir:*)",
       "Bash(cmd /c \"minicompiler.exe comprehensive_test.c output_comprehensive.s\")",
       "Bash(./minicompiler:*)",
-      "Bash(make test-file:*)"
+      "Bash(make test-file:*)",
+      "Bash(git config:*)",
+      "Bash(git pull:*)",
+      "Bash(git check-ignore:*)"
     ],
     "deny": [],
     "ask": []
