@@ -391,6 +391,60 @@ void generateTAC(ASTNode* node) {
             break;
         }
 
+        /* Switch statement: switch (expr) { case ... } */
+        case NODE_SWITCH: {
+            char* exprTemp = generateTACExpr(node->data.switchstmt.expr);
+            char* endLabel = newLabel();
+            
+            /* Generate code for each case */
+            ASTNode* caseNode = node->data.switchstmt.cases;
+            while (caseNode) {
+                if (caseNode->type == NODE_CASE) {
+                    char* caseLabel = newLabel();
+                    char* nextLabel = newLabel();
+                    
+                    /* Create temp for case value */
+                    char valueStr[20];
+                    sprintf(valueStr, "%d", caseNode->data.casestmt.value);
+                    
+                    /* Compare: if exprTemp == caseValue goto caseLabel */
+                    char* cmpTemp = newTemp();
+                    appendTAC(createTAC(TAC_CMP_EQ, exprTemp, valueStr, cmpTemp));
+                    appendTAC(createTAC(TAC_IF_FALSE, cmpTemp, NULL, nextLabel));
+                    
+                    /* Case body */
+                    appendTAC(createTAC(TAC_LABEL, NULL, NULL, caseLabel));
+                    if (caseNode->data.casestmt.body) {
+                        generateTAC(caseNode->data.casestmt.body);
+                    }
+                    
+                    /* Next case label */
+                    appendTAC(createTAC(TAC_LABEL, NULL, NULL, nextLabel));
+                    
+                    free(caseLabel);
+                    free(nextLabel);
+                    caseNode = caseNode->data.casestmt.next;
+                } else if (caseNode->type == NODE_DEFAULT) {
+                    /* Default case */
+                    if (caseNode->data.defaultstmt.body) {
+                        generateTAC(caseNode->data.defaultstmt.body);
+                    }
+                    break;
+                } else {
+                    break;
+                }
+            }
+            
+            appendTAC(createTAC(TAC_LABEL, NULL, NULL, endLabel));
+            free(endLabel);
+            break;
+        }
+
+        case NODE_BREAK:
+            /* Break is handled by jumping to end label */
+            /* In a complete implementation, we'd track the current loop/switch end label */
+            break;
+
         default:
             break;
     }
@@ -649,4 +703,25 @@ void printOptimizedTAC() {
         }
         curr = curr->next;
     }
+}
+
+/* STATISTICS FUNCTIONS */
+int getTACInstructionCount() {
+    int count = 0;
+    TACInstr* curr = tacList.head;
+    while (curr) {
+        count++;
+        curr = curr->next;
+    }
+    return count;
+}
+
+int getOptimizedTACInstructionCount() {
+    int count = 0;
+    TACInstr* curr = optimizedList.head;
+    while (curr) {
+        count++;
+        curr = curr->next;
+    }
+    return count;
 }

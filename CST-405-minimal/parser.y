@@ -33,12 +33,15 @@ ASTNode* root = NULL;
 %token AND OR NOT EQ
 /* Multi-value equality */
 %token IS
+/* Switch-case tokens */
+%token SWITCH CASE DEFAULT BREAK COLON
 
 /* NON-TERMINAL TYPES */
 %type <node> program function_list function_decl param_list
 %type <node> global_decl_list global_decl
 %type <node> stmt_list stmt decl assign expr print_stmt while_stmt for_stmt if_stmt
 %type <node> value_list
+%type <node> switch_stmt case_list case_stmt
 
 /* OPERATOR PRECEDENCE */
 %left OR
@@ -194,6 +197,10 @@ stmt:
     | while_stmt
     | for_stmt
     | if_stmt
+    | switch_stmt
+    | BREAK ';' {
+        $$ = createBreak();
+    }
     | RETURN expr ';' {
         $$ = createReturn($2);
     }
@@ -384,6 +391,38 @@ if_stmt:
     }
     | IF LPAREN expr RPAREN LBRACE stmt_list RBRACE ELSE LBRACE stmt_list RBRACE {
         $$ = createIfElse($3, $6, $10);
+    }
+    ;
+
+/* SWITCH-CASE STATEMENT */
+switch_stmt:
+    SWITCH LPAREN expr RPAREN LBRACE case_list RBRACE {
+        $$ = createSwitch($3, $6);
+    }
+    ;
+
+case_list:
+    case_stmt {
+        $$ = $1;
+    }
+    | case_stmt case_list {
+        $1->data.casestmt.next = $2;
+        $$ = $1;
+    }
+    ;
+
+case_stmt:
+    CASE NUM COLON stmt_list {
+        $$ = createCase($2, $4, NULL);
+    }
+    | CASE NUM COLON {
+        $$ = createCase($2, NULL, NULL);
+    }
+    | DEFAULT COLON stmt_list {
+        $$ = createDefault($3);
+    }
+    | DEFAULT COLON {
+        $$ = createDefault(NULL);
     }
     ;
 

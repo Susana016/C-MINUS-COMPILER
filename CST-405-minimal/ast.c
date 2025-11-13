@@ -321,6 +321,43 @@ ASTNode* createValueList(ASTNode* value, ASTNode* next) {
     return node;
 }
 
+/* ============================================
+   SWITCH-CASE NODE CREATION
+   ============================================ */
+
+/* Create a switch statement node */
+ASTNode* createSwitch(ASTNode* expr, ASTNode* cases) {
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_SWITCH;
+    node->data.switchstmt.expr = expr;
+    node->data.switchstmt.cases = cases;
+    return node;
+}
+
+/* Create a case statement node */
+ASTNode* createCase(int value, ASTNode* body, ASTNode* next) {
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_CASE;
+    node->data.casestmt.value = value;
+    node->data.casestmt.body = body;
+    node->data.casestmt.next = next;
+    return node;
+}
+
+/* Create a default statement node */
+ASTNode* createDefault(ASTNode* body) {
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_DEFAULT;
+    node->data.defaultstmt.body = body;
+    return node;
+}
+
+/* Create a break statement node */
+ASTNode* createBreak() {
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_BREAK;
+    return node;
+}
 
 /* Display the AST structure (for debugging and education) */
 void printAST(ASTNode* node, int level) {
@@ -569,8 +606,93 @@ void printAST(ASTNode* node, int level) {
             }
             break;
 
+        case NODE_SWITCH:
+            printf("SWITCH\n");
+            for (int i = 0; i < level + 1; i++) printf("  ");
+            printf("Expression:\n");
+            printAST(node->data.switchstmt.expr, level + 2);
+            for (int i = 0; i < level + 1; i++) printf("  ");
+            printf("Cases:\n");
+            printAST(node->data.switchstmt.cases, level + 2);
+            break;
+
+        case NODE_CASE:
+            printf("CASE %d:\n", node->data.casestmt.value);
+            printAST(node->data.casestmt.body, level + 1);
+            if (node->data.casestmt.next) {
+                printAST(node->data.casestmt.next, level);
+            }
+            break;
+
+        case NODE_DEFAULT:
+            printf("DEFAULT:\n");
+            printAST(node->data.defaultstmt.body, level + 1);
+            break;
+
+        case NODE_BREAK:
+            printf("BREAK\n");
+            break;
+
         default:
             printf("UNKNOWN NODE TYPE\n");
     }
+}
+
+/* Count AST nodes for statistics */
+int countASTNodes(ASTNode* node) {
+    if (!node) return 0;
+    
+    int count = 1;  /* Current node */
+    
+    switch(node->type) {
+        case NODE_BINOP:
+            count += countASTNodes(node->data.binop.left);
+            count += countASTNodes(node->data.binop.right);
+            break;
+        case NODE_ASSIGN:
+            count += countASTNodes(node->data.assign.value);
+            break;
+        case NODE_PRINT:
+            count += countASTNodes(node->data.expr);
+            break;
+        case NODE_STMT_LIST:
+            count += countASTNodes(node->data.stmtlist.stmt);
+            count += countASTNodes(node->data.stmtlist.next);
+            break;
+        case NODE_DECL_INIT:
+            count += countASTNodes(node->data.decl_init.value);
+            break;
+        case NODE_ARRAY_ACCESS:
+            count += countASTNodes(node->data.array_access.index);
+            break;
+        case NODE_ARRAY_ASSIGN:
+            count += countASTNodes(node->data.array_assign.index);
+            count += countASTNodes(node->data.array_assign.value);
+            break;
+        case NODE_ARRAY_2D_ACCESS:
+            count += countASTNodes(node->data.array_2d_access.row);
+            count += countASTNodes(node->data.array_2d_access.col);
+            break;
+        case NODE_ARRAY_2D_ASSIGN:
+            count += countASTNodes(node->data.array_2d_access.row);
+            count += countASTNodes(node->data.array_2d_access.col);
+            count += countASTNodes(node->data.array_2d_assign.value);
+            break;
+        case NODE_SWITCH:
+            count += countASTNodes(node->data.switchstmt.expr);
+            count += countASTNodes(node->data.switchstmt.cases);
+            break;
+        case NODE_CASE:
+            count += countASTNodes(node->data.casestmt.body);
+            count += countASTNodes(node->data.casestmt.next);
+            break;
+        case NODE_DEFAULT:
+            count += countASTNodes(node->data.defaultstmt.body);
+            break;
+        default:
+            break;
+    }
+    
+    return count;
 }
 

@@ -51,5 +51,7 @@ Symbol* lookupSymbol(char* name);  /* Search current + parent scopes */
 int isInCurrentScope(char* name);  /* Check only current scope */
 void printSymbolTable(SymbolTable* table);
 
+/* Statistics */
+int getVariableCount();  /* Get total number of variables declared */
 
 #endif

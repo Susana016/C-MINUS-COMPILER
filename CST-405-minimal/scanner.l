@@ -29,6 +29,10 @@
 "void"          { return VOID; }
 "main"          { return MAIN; }
 "is"            { return IS; }
+"switch"        { return SWITCH; }
+"case"          { return CASE; }
+"default"       { return DEFAULT; }
+"break"         { return BREAK; }
 
 [a-zA-Z_][a-zA-Z0-9_]* { 
     yylval.str = strdup(yytext);
@@ -59,6 +63,7 @@
 "&&"            { return AND; }
 "||"            { return OR; }
 ";"             { return ';'; }
+":"             { return COLON; }
 "("             { return LPAREN; }  
 ")"             { return RPAREN; }   
 "{"             { return LBRACE; }

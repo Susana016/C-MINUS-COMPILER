@@ -155,3 +155,19 @@ void printSymbolTable(SymbolTable* table) {
     printf("|---------------------------------------------|\n");
     printScope(table->currentScope, 0);
 }
+
+/* Get total variable count for statistics */
+int getVariableCount() {
+    int count = 0;
+    Scope* current = symtab.currentScope;
+    while (current) {
+        for (int i = 0; i < current->count; i++) {
+            if (!current->symbols[i].isFunction) {
+                count++;
+            }
+        }
+        current = current->parent;
+    }
+    return count;
+}
+

@@ -45,7 +45,14 @@ typedef enum {
 
     /* Multi-value equality check */
     NODE_MULTI_VALUE_CHECK,
-    NODE_VALUE_LIST
+    NODE_VALUE_LIST,
+    
+    /* Switch-Case */
+    NODE_SWITCH,
+    NODE_CASE_LIST,
+    NODE_CASE,
+    NODE_DEFAULT,
+    NODE_BREAK
 } NodeType;
 
 /* Forward declaration */
@@ -187,6 +194,22 @@ struct ASTNode {
             struct ASTNode* next;      /* Next value in list */
         } valueList;
 
+        /* Switch-Case structures */
+        struct {
+            struct ASTNode* expr;      /* Switch expression */
+            struct ASTNode* cases;     /* List of case statements */
+        } switchstmt;
+
+        struct {
+            int value;                 /* Case value (constant) */
+            struct ASTNode* body;      /* Case body */
+            struct ASTNode* next;      /* Next case */
+        } casestmt;
+
+        struct {
+            struct ASTNode* body;      /* Default body */
+        } defaultstmt;
+
     } data;
 };
 
@@ -241,7 +264,16 @@ ASTNode* createGoto(char* name);
 ASTNode* createMultiValueCheck(ASTNode* expr, ASTNode* values);
 ASTNode* createValueList(ASTNode* value, ASTNode* next);
 
+/* Switch-Case functions */
+ASTNode* createSwitch(ASTNode* expr, ASTNode* cases);
+ASTNode* createCase(int value, ASTNode* body, ASTNode* next);
+ASTNode* createDefault(ASTNode* body);
+ASTNode* createBreak();
+
 /* Display function */
 void printAST(ASTNode* node, int level);
+
+/* Statistics */
+int countASTNodes(ASTNode* node);
 
 #endif

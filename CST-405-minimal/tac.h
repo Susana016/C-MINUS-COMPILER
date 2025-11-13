@@ -68,4 +68,8 @@ void optimizeTAC();                                                /* Apply opti
 void printOptimizedTAC();                                          /* Display optimized TAC */
 char* newLabel(); /* Function to create a new label */
 
+/* STATISTICS FUNCTIONS */
+int getTACInstructionCount();                                      /* Get count of unoptimized TAC instructions */
+int getOptimizedTACInstructionCount();                             /* Get count of optimized TAC instructions */
+
 #endif
