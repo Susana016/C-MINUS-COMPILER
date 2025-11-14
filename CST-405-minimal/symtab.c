@@ -114,12 +114,12 @@ int addParameter(char* name, char* type) {
     scope->symbols[scope->count].isFunction = 0;
     
     /* Parameters start at offset +8 (after $ra and $fp) */
-    static int paramOffset = 8;
+    /* Calculate offset based on current parameter count in scope */
+    int paramOffset = 8 + (scope->count * 4);
     scope->symbols[scope->count].offset = paramOffset;
-    paramOffset += 4;  /* Each param is 4 bytes */
-    
+
     scope->count++;
-    return 0;
+    return paramOffset;
 }
 
 int getVarOffset(char* name) {

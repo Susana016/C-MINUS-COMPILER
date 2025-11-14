@@ -111,20 +111,36 @@ void genExpr(ASTNode* node) {
 
         case NODE_ARRAY_ACCESS: {
             // Generate code for array element access: arr[index]
-            int offset = getVarOffset(node->data.array_access.name);
-            if (offset == -1) {
+            Symbol* arrSym = lookupSymbol(node->data.array_access.name);
+            if (!arrSym) {
                 fprintf(stderr, "Error: Array %s not declared\n", node->data.array_access.name);
                 exit(1);
             }
+            int offset = arrSym->offset;
 
             // Compute index
             genExpr(node->data.array_access.index);
             int indexReg = tempReg - 1;
 
+            // Check if array is global
+            int isGlobal = 0;
+            if (symtab.globalScope) {
+                for (int i = 0; i < symtab.globalScope->count; i++) {
+                    if (&symtab.globalScope->symbols[i] == arrSym) {
+                        isGlobal = 1;
+                        break;
+                    }
+                }
+            }
+
             // Calculate address: base_offset + (index * 4)
             fprintf(output, "    # Array access: %s[index]\n", node->data.array_access.name);
             fprintf(output, "    sll $t%d, $t%d, 2\n", indexReg, indexReg);      // index * 4
-            fprintf(output, "    add $t%d, $t%d, $sp\n", indexReg, indexReg);    // addr = (index*4) + $sp
+            if (isGlobal) {
+                fprintf(output, "    add $t%d, $t%d, $s7\n", indexReg, indexReg);    // addr = (index*4) + $s7 (global)
+            } else {
+                fprintf(output, "    add $t%d, $t%d, $sp\n", indexReg, indexReg);    // addr = (index*4) + $sp (local)
+            }
             fprintf(output, "    lw $t%d, %d($t%d)\n", indexReg, offset, indexReg);  // load from offset(addr)
             break;
         }
@@ -417,11 +433,12 @@ void genStmt(ASTNode* node) {
 
         case NODE_ARRAY_ASSIGN: {
             // Array element assignment: arr[index] = value;
-            int offset = getVarOffset(node->data.array_assign.name);
-            if (offset == -1) {
+            Symbol* arrSym = lookupSymbol(node->data.array_assign.name);
+            if (!arrSym) {
                 fprintf(stderr, "Error: Array %s not declared\n", node->data.array_assign.name);
                 exit(1);
             }
+            int offset = arrSym->offset;
 
             // Evaluate value first
             genExpr(node->data.array_assign.value);
@@ -431,10 +448,25 @@ void genStmt(ASTNode* node) {
             genExpr(node->data.array_assign.index);
             int indexReg = tempReg - 1;
 
+            // Check if array is global
+            int isGlobal = 0;
+            if (symtab.globalScope) {
+                for (int i = 0; i < symtab.globalScope->count; i++) {
+                    if (&symtab.globalScope->symbols[i] == arrSym) {
+                        isGlobal = 1;
+                        break;
+                    }
+                }
+            }
+
             // Calculate address and store
             fprintf(output, "    # Array assignment: %s[index] = value\n", node->data.array_assign.name);
             fprintf(output, "    sll $t%d, $t%d, 2\n", indexReg, indexReg);     // index * 4
-            fprintf(output, "    add $t%d, $t%d, $sp\n", indexReg, indexReg);   // addr = (index*4) + $sp
+            if (isGlobal) {
+                fprintf(output, "    add $t%d, $t%d, $s7\n", indexReg, indexReg);   // addr = (index*4) + $s7 (global)
+            } else {
+                fprintf(output, "    add $t%d, $t%d, $sp\n", indexReg, indexReg);   // addr = (index*4) + $sp (local)
+            }
             fprintf(output, "    sw $t%d, %d($t%d)\n", valueReg, offset, indexReg);  // store at offset(addr)
             tempReg = 0;
             break;
@@ -511,10 +543,15 @@ void genStmt(ASTNode* node) {
             /* Enter function scope */
             enterScope();
 
-            /* Add parameters to symbol table */
+            /* Add parameters to symbol table and save from $a registers */
             ASTNode* param = node->data.function.params;
+            int paramNum = 0;
             while (param) {
-                addParameter(param->data.parameter.name, param->data.parameter.type);
+                int offset = addParameter(param->data.parameter.name, param->data.parameter.type);
+                if (offset != -1 && paramNum < 4) {
+                    fprintf(output, "    sw $a%d, %d($sp)\n", paramNum, offset);
+                }
+                paramNum++;
                 param = param->data.parameter.next;
             }
 

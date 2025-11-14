@@ -25,6 +25,7 @@ int main() {
     num[4] = 22;
 
     /* Print original array */
+    print(1111);
     print(num[0]);
     print(num[1]);
     print(num[2]);
@@ -46,6 +47,7 @@ int main() {
     }
 
     /* Print sorted array */
+    print(2222);
     print(num[0]);
     print(num[1]);
     print(num[2]);
