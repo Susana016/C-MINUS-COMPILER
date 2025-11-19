@@ -11,10 +11,14 @@
 /* Flex options to suppress warnings for unused functions */
 %option nounput
 %option noinput
+%option yylineno
+
 
 %%
 
-"/*"([^*]|\*+[^*/])*\*+"/"  { }
+"/*"([^*]|\*+[^*/])*\*+"/"  { /* ignore multi-line comments */ }
+
+    /* Single-line comments */
 "//".*          { /* ignore single-line comments */ }
 
 
@@ -74,9 +78,14 @@
 
 
 
-[ \t\n]         { }
+    /* Whitespace and newlines - yylineno automatically increments on \n */
+[ \t]+          { /* ignore whitespace */ }
+\n              { /* newlines tracked by yylineno */ }
 
-.               { printf("Lexical Error: Unknown character '%c'\n", *yytext); }
+    /* Catch unknown characters */
+.               { 
+    fprintf(stderr, "Lexical Error at line %d: Unknown character '%c'\n", yylineno, *yytext); 
+}  
 
 %%
 

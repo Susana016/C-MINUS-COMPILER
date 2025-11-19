@@ -11,6 +11,7 @@
 extern int yylex();
 extern int yyparse();
 extern FILE* yyin;
+extern int yylineno;  /* Line number from scanner */
 
 void yyerror(const char* s);
 ASTNode* root = NULL;
@@ -441,5 +442,5 @@ value_list:
 %%
 
 void yyerror(const char* s) {
-    fprintf(stderr, "Syntax Error: %s\n", s);
+    fprintf(stderr, "Syntax Error at line %d: %s\n", yylineno, s);
 }
