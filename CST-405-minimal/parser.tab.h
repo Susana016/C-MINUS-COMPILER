@@ -63,12 +63,16 @@
      OR = 279,
      NOT = 280,
      EQ = 281,
-     IS = 282,
-     SWITCH = 283,
-     CASE = 284,
-     DEFAULT = 285,
-     BREAK = 286,
-     COLON = 287
+     LE = 282,
+     GE = 283,
+     IS = 284,
+     SWITCH = 285,
+     CASE = 286,
+     DEFAULT = 287,
+     BREAK = 288,
+     COLON = 289,
+     UMINUS = 290,
+     NEQ = 291
    };
 #endif
 /* Tokens.  */
@@ -96,12 +100,16 @@
 #define OR 279
 #define NOT 280
 #define EQ 281
-#define IS 282
-#define SWITCH 283
-#define CASE 284
-#define DEFAULT 285
-#define BREAK 286
-#define COLON 287
+#define LE 282
+#define GE 283
+#define IS 284
+#define SWITCH 285
+#define CASE 286
+#define DEFAULT 287
+#define BREAK 288
+#define COLON 289
+#define UMINUS 290
+#define NEQ 291
 
 
 
@@ -116,7 +124,7 @@ typedef union YYSTYPE
     struct ASTNode* node;
 }
 /* Line 1529 of yacc.c.  */
-#line 120 "parser.tab.h"
+#line 128 "parser.tab.h"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1

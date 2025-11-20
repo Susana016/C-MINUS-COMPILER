@@ -3,6 +3,7 @@
 #include <string.h>
 #include <ctype.h>
 #include "tac.h"
+#include "parser.tab.h"  // Add this line to get token definitions like LE, GE
 
 TACList tacList;
 TACList optimizedList;
@@ -106,6 +107,15 @@ char* generateTACExpr(ASTNode* node) {
                 appendTAC(createTAC(TAC_AND, left, right, temp));
             } else if (node->data.binop.op == '|') {
                 appendTAC(createTAC(TAC_OR, left, right, temp));
+            }
+            else if (node->data.binop.op == LE) {
+                appendTAC(createTAC(TAC_LE, left, right, temp));
+            }
+            else if (node->data.binop.op == GE) {
+                appendTAC(createTAC(TAC_GE, left, right, temp));
+            }
+            else if (node->data.binop.op == NEQ) {
+                appendTAC(createTAC(TAC_NEQ, left, right, temp));
             }
 
             return temp;
@@ -504,6 +514,15 @@ void printTAC() {
             case TAC_CMP_EQ:
                 printf("%s = %s == %s\n", curr->result, curr->arg1, curr->arg2);
                 break;
+            case TAC_LE:
+                printf("%s = %s <= %s\n", curr->result, curr->arg1, curr->arg2);
+                break;
+            case TAC_GE:
+                printf("%s = %s >= %s\n", curr->result, curr->arg1, curr->arg2);
+                break;
+            case TAC_NEQ:
+                printf("%s = %s != %s\n", curr->result, curr->arg1, curr->arg2);
+                break;
             case TAC_AND:
                 printf("%s = %s && %s\n", curr->result, curr->arg1, curr->arg2);
                 break;
@@ -690,6 +709,9 @@ void printOptimizedTAC() {
             case TAC_CMP_LT: printf("%s = %s < %s\n", curr->result, curr->arg1, curr->arg2); break;
             case TAC_CMP_GT: printf("%s = %s > %s\n", curr->result, curr->arg1, curr->arg2); break;
             case TAC_CMP_EQ: printf("%s = %s == %s\n", curr->result, curr->arg1, curr->arg2); break;
+            case TAC_LE: printf("%s = %s <= %s\n", curr->result, curr->arg1, curr->arg2); break;
+            case TAC_GE: printf("%s = %s >= %s\n", curr->result, curr->arg1, curr->arg2); break;
+            case TAC_NEQ: printf("%s = %s != %s\n", curr->result, curr->arg1, curr->arg2); break;
             case TAC_AND: printf("%s = %s && %s\n", curr->result, curr->arg1, curr->arg2); break;
             case TAC_OR: printf("%s = %s || %s\n", curr->result, curr->arg1, curr->arg2); break;
             case TAC_NOT: printf("%s = !%s\n", curr->result, curr->arg1); break;

@@ -30,10 +30,13 @@ ASTNode* root = NULL;
 %token <str> ID
 %token INT DOUBLE PRINT WHILE FOR IF ELSE VOID RETURN MAIN
 %token LBRACE RBRACE LPAREN RPAREN LBRACKET RBRACKET COMMA
+
 /* Logical operators */
-%token AND OR NOT EQ
+%token AND OR NOT EQ LE GE
+
 /* Multi-value equality */
 %token IS
+
 /* Switch-case tokens */
 %token SWITCH CASE DEFAULT BREAK COLON
 
@@ -47,8 +50,8 @@ ASTNode* root = NULL;
 /* OPERATOR PRECEDENCE */
 %left OR
 %left AND
-%right NOT
-%left EQ '<' '>'
+%right NOT UMINUS
+%left EQ NEQ LE GE '<' '>'
 %left '+' '-'
 %left '*' '/' '%'
 
@@ -170,6 +173,22 @@ param_list:
         free($4);
     }
     | param_list COMMA DOUBLE ID {
+        $$ = createParameter($4, "double", $1);
+        free($4);
+    }
+    | INT ID LBRACKET RBRACKET {
+        $$ = createParameter($2, "int[]", NULL);
+        free($2);
+    }
+    | DOUBLE ID LBRACKET RBRACKET {
+        $$ = createParameter($2, "double[]", NULL);
+        free($2);
+    }
+    | param_list COMMA INT ID LBRACKET RBRACKET {
+        $$ = createParameter($4, "int", $1);
+        free($4);
+    }
+    | param_list COMMA DOUBLE ID LBRACKET RBRACKET {
         $$ = createParameter($4, "double", $1);
         free($4);
     }
@@ -299,6 +318,15 @@ expr:
     | expr EQ expr {
         $$ = createBinOp('=', $1, $3);
     }
+    | expr LE expr {
+        $$ = createBinOp(LE, $1, $3);
+    }
+    | expr GE expr {
+        $$ = createBinOp(GE, $1, $3);
+    }
+    | expr NEQ expr {
+        $$ = createBinOp(NEQ, $1, $3);
+    }
     | expr AND expr {
         $$ = createBinOp('&', $1, $3);
     }
@@ -336,6 +364,10 @@ expr:
     | expr IS value_list {
         /* Multi-value equality check: expr is val1, val2, val3 */
         $$ = createMultiValueCheck($1, $3);
+    }
+    | '-' expr %prec UMINUS  { 
+        /* Desugar -Expr into 0 - Expr */
+        $$ = createBinOp('-', createNum(0), $2); 
     }
     ;
 

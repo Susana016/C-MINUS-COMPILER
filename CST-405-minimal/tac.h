@@ -21,6 +21,9 @@ typedef enum {
     TAC_CMP_EQ,  /* Comparison equal: result = arg1 == arg2 (0/1) */
     TAC_AND,     /* Logical AND: result = arg1 && arg2 (0/1) */
     TAC_OR,      /* Logical OR: result = arg1 || arg2 (0/1) */
+    TAC_LE,      /* Comparison less-than-or-equal: result = arg1 <= arg2 (0/1) */
+    TAC_GE,      /* Comparison greater-than-or-equal: result = arg1 >= arg2 (0/1) */
+    TAC_NEQ,     /* Comparison not-equal: result = arg1 != arg2 (0/1) */
     TAC_NOT,     /* Logical NOT: result = !arg1 (0/1) */
     TAC_ASSIGN,  /* Assignment: result = arg1 */
     TAC_PRINT,   /* Print: print(arg1) */

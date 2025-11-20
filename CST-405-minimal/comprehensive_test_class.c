@@ -70,11 +70,11 @@ int testRelational(int x, int y) {
         result = result + 1;
     }
 
-    /* Test less than or equal 
+    /* Test less than or equal */
     if (x <= y) {
         result = result + 10;
     }
-        */
+        
 
     /* Test greater than */
     if (x > y) {

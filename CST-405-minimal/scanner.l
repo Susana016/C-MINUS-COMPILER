@@ -49,21 +49,23 @@
 }
 
 [0-9]+          { 
-    yylval.num = atoi(yytext);
+    yylval.num = atoi(yytext); 
     return NUM; 
 }
-
 
 "+"             { return '+'; }
 "-"             { return '-'; }
 "*"             { return '*'; }
 "/"             { return '/'; }
 "%"             { return '%'; }
-"=="            { return EQ; }
 "="             { return '='; }
 "<"             { return '<'; }
 ">"             { return '>'; }
 "!"             { return NOT; }
+"=="            { return EQ; }
+"!="            { return NEQ; }
+"<="            { return LE; }
+">="            { return GE; }
 "&&"            { return AND; }
 "||"            { return OR; }
 ";"             { return ';'; }
