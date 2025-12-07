@@ -37,6 +37,38 @@ void exitScope() {
     free(oldScope);
 }
 
+void pushScope() {
+    Scope* newScope = malloc(sizeof(Scope));
+    newScope->count = 0;
+    newScope->parent = symtab.currentScope;
+    symtab.currentScope = newScope;
+}
+
+void popScope() {
+    if (symtab.currentScope && symtab.currentScope != symtab.globalScope) {
+        Scope* oldScope = symtab.currentScope;
+        symtab.currentScope = oldScope->parent;
+        free(oldScope);
+    }
+}
+
+Symbol* addSymbol(const char* name, DataType type) {
+    if (!symtab.currentScope) return NULL;
+    
+    if (symtab.currentScope->count >= 100) {
+        fprintf(stderr, "Error: Symbol table full\n");
+        return NULL;
+    }
+    
+    Symbol* sym = &symtab.currentScope->symbols[symtab.currentScope->count];
+    sym->name = strdup(name);
+    sym->type = type;
+    sym->offset = 0; // Will be set by caller
+    
+    symtab.currentScope->count++;
+    return sym;
+}
+
 Symbol* lookupSymbol(char* name) {
     Scope* scope = symtab.currentScope;
     

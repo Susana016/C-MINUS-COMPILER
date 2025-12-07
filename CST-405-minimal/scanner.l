@@ -37,6 +37,8 @@
 "case"          { return CASE; }
 "default"       { return DEFAULT; }
 "break"         { return BREAK; }
+"output"        { return OUTPUT; }
+"input"         { return INPUT; }
 
 [a-zA-Z_][a-zA-Z0-9_]* { 
     yylval.str = strdup(yytext);

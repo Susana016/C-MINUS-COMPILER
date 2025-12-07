@@ -9,6 +9,7 @@ typedef enum {
     NODE_FLOAT_NUM,
     NODE_VAR,
     NODE_BINOP,
+    NODE_UNARY_OP,        // Add this
     NODE_DECL,
     NODE_DECL_DOUBLE,
     NODE_DECL_INIT,
@@ -52,7 +53,9 @@ typedef enum {
     NODE_CASE_LIST,
     NODE_CASE,
     NODE_DEFAULT,
-    NODE_BREAK
+    NODE_BREAK,
+
+    NODE_ARG_LIST
 } NodeType;
 
 /* Forward declaration */
@@ -68,7 +71,7 @@ struct ASTNode {
         char* name;
         
         struct {
-            char op;
+            int op;
             struct ASTNode* left;
             struct ASTNode* right;
         } binop;
@@ -210,6 +213,16 @@ struct ASTNode {
             struct ASTNode* body;      /* Default body */
         } defaultstmt;
 
+        struct {
+            int op;
+            struct ASTNode* operand;
+        } unary_op;
+
+        struct {
+            struct ASTNode* arg;
+            struct ASTNode* next;
+        } arg_list;
+
     } data;
 };
 
@@ -221,7 +234,11 @@ struct ASTNode {
 ASTNode* createNum(int value);
 ASTNode* createFloatNum(double value);
 ASTNode* createVar(char* name);
-ASTNode* createBinOp(char op, ASTNode* left, ASTNode* right);
+ASTNode* createBinOp(int op, ASTNode* left, ASTNode* right);
+
+/* Create a unary operation node (for NOT, negation) */
+ASTNode* createUnaryOp(int op, ASTNode* operand);
+
 ASTNode* createDecl(char* name);
 ASTNode* createDeclDouble(char* name);
 ASTNode* createAssign(char* var, ASTNode* value);
@@ -254,6 +271,7 @@ ASTNode* createParameter(char* name, char* type, ASTNode* next);
 ASTNode* createReturn(ASTNode* value);
 ASTNode* createCall(char* funcName, ASTNode* args);
 ASTNode* createCallExpr(char* funcName, ASTNode* args);
+ASTNode* createArgList(ASTNode* arg, ASTNode* next);
 
 ASTNode* createIf(ASTNode* condition, ASTNode* thenBlock);
 ASTNode* createIfElse(ASTNode* condition, ASTNode* thenBlock, ASTNode* elseBlock);
@@ -275,5 +293,11 @@ void printAST(ASTNode* node, int level);
 
 /* Statistics */
 int countASTNodes(ASTNode* node);
+
+
+/* Built-in function constructors */
+ASTNode* createOutput(ASTNode* expr);
+ASTNode* createInput(void);
+
 
 #endif

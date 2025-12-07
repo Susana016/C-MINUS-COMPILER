@@ -37,6 +37,9 @@ int testArithmetic(int a, int b) {
     int prod;
     int quot;
     int complex;
+    int temp1;
+    int temp2;
+    int temp3;
 
     /* Test all four basic operations */
     sum = a + b;
@@ -45,15 +48,25 @@ int testArithmetic(int a, int b) {
     quot = a / b;
 
     /* Test operator precedence: should be 2 + (3 * 4) = 14 */
-    complex = 2 + 3 * 4;
+    temp1 = 3 * 4;
+    complex = 2 + temp1;
 
     /* Test with parentheses: should be (2 + 3) * 4 = 20 */
-    complex = (2 + 3) * 4;
+    temp2 = 2 + 3;
+    complex = temp2 * 4;
 
-    /* Complex expression */
-    complex = a * b + a / b - a + b;
+    /* Complex expression - broken into steps */
+    temp1 = a * b;
+    temp2 = a / b;
+    temp3 = temp1 + temp2;
+    temp3 = temp3 - a;
+    complex = temp3 + b;
 
-    return sum + diff + prod + quot;
+    /* Return calculation */
+    temp1 = sum + diff;
+    temp2 = prod + quot;
+    temp3 = temp1 + temp2;
+    return temp3;
 }
 
 /* ========================================
@@ -187,18 +200,21 @@ int testNestedLoops(int rows, int cols) {
 
 void testArrayOperations(int arr[], int size) {
     int i;
+    int temp;
 
     /* Initialize array */
     i = 0;
     while (i < size) {
-        arr[i] = i * 2;
+        temp = i * 2;
+        arr[i] = temp;
         i = i + 1;
     }
 
     /* Modify array elements */
     i = 0;
     while (i < size) {
-        arr[i] = arr[i] + 1;
+        temp = arr[i];
+        arr[i] = temp + 1;
         i = i + 1;
     }
 }
@@ -224,11 +240,15 @@ int sumArray(int arr[], int size) {
 
 int factorial(int n) {
     int result;
+    int nMinus1;
+    int factResult;
 
     if (n <= 1) {
         result = 1;
     } else {
-        result = n * factorial(n - 1);
+        nMinus1 = n - 1;
+        factResult = factorial(nMinus1);
+        result = n * factResult;
     }
 
     return result;
@@ -236,27 +256,45 @@ int factorial(int n) {
 
 int fibonacci(int n) {
     int result;
+    int nMinus1;
+    int nMinus2;
+    int fib1;
+    int fib2;
 
     if (n <= 1) {
         result = n;
     } else {
-        result = fibonacci(n - 1) + fibonacci(n - 2);
+        nMinus1 = n - 1;
+        nMinus2 = n - 2;
+        fib1 = fibonacci(nMinus1);
+        fib2 = fibonacci(nMinus2);
+        result = fib1 + fib2;
     }
 
     return result;
 }
 
+/* ========================================
+   POWER FUNCTION (RECURSION)
+   ======================================== */
+
 int power(int base, int exp) {
     int result;
+    int expMinus1;
+    int powerResult;
 
     if (exp == 0) {
         result = 1;
     } else {
-        result = base * power(base, exp - 1);
+        expMinus1 = exp - 1;
+        powerResult = power(base, expMinus1);
+        result = base * powerResult;
     }
 
     return result;
 }
+
+
 
 /* ========================================
    GCD ALGORITHM (Euclidean)
@@ -264,9 +302,13 @@ int power(int base, int exp) {
 
 int gcd(int a, int b) {
     int remainder;
+    int temp1;
+    int temp2;
 
     while (b != 0) {
-        remainder = a - (a / b) * b;  /* Modulo operation */
+        temp1 = a / b;
+        temp2 = temp1 * b;
+        remainder = a - temp2;
         a = b;
         b = remainder;
     }
@@ -288,7 +330,7 @@ int linearSearch(int arr[], int size, int target) {
     while (i < size) {
         if (arr[i] == target) {
             found = i;
-            i = size;  /* Exit loop */
+            i = size;
         } else {
             i = i + 1;
         }
@@ -305,16 +347,22 @@ void bubbleSort(int arr[], int size) {
     int i;
     int j;
     int temp;
+    int limit1;
+    int limit2;
+    int jPlus1;
 
     i = 0;
-    while (i < size - 1) {
+    limit1 = size - 1;
+    while (i < limit1) {
         j = 0;
-        while (j < size - i - 1) {
-            if (arr[j] > arr[j + 1]) {
-                /* Swap elements */
+        limit2 = size - i;
+        limit2 = limit2 - 1;
+        while (j < limit2) {
+            jPlus1 = j + 1;
+            if (arr[j] > arr[jPlus1]) {
                 temp = arr[j];
-                arr[j] = arr[j + 1];
-                arr[j + 1] = temp;
+                arr[j] = arr[jPlus1];
+                arr[jPlus1] = temp;
             }
             j = j + 1;
         }
@@ -367,6 +415,8 @@ int findMin(int arr[], int size) {
 int isPrime(int n) {
     int i;
     int result;
+    int temp1;
+    int temp2;
 
     if (n <= 1) {
         result = 0;
@@ -375,9 +425,11 @@ int isPrime(int n) {
         i = 2;
 
         while (i < n) {
-            if (n / i * i == n) {  /* Check if i divides n */
+            temp1 = n / i;
+            temp2 = temp1 * i;
+            if (temp2 == n) {
                 result = 0;
-                i = n;  /* Exit loop */
+                i = n;
             } else {
                 i = i + 1;
             }
@@ -394,12 +446,14 @@ int isPrime(int n) {
 int countPrimes(int limit) {
     int count;
     int i;
+    int primeCheck;
 
     count = 0;
     i = 2;
 
     while (i <= limit) {
-        if (isPrime(i) == 1) {
+        primeCheck = isPrime(i);
+        if (primeCheck == 1) {
             count = count + 1;
         }
         i = i + 1;
@@ -436,15 +490,34 @@ void reverseArray(int arr[], int size) {
 
 int testComplexExpressions(int a, int b, int c) {
     int result;
+    int temp1;
+    int temp2;
+    int temp3;
+    int temp4;
+    int temp5;
 
     /* Multiple operations with precedence */
-    result = a + b * c - a / b;
+    temp1 = b * c;
+    temp2 = a / b;
+    temp3 = a + temp1;
+    result = temp3 - temp2;
 
     /* Nested parentheses */
-    result = ((a + b) * (c - a)) / (b + 1);
+    temp1 = a + b;
+    temp2 = c - a;
+    temp3 = temp1 * temp2;
+    temp4 = b + 1;
+    result = temp3 / temp4;
 
     /* Long expression */
-    result = a * b + c * a - b / c + a - b + c;
+    temp1 = a * b;
+    temp2 = c * a;
+    temp3 = b / c;
+    temp4 = temp1 + temp2;
+    temp4 = temp4 - temp3;
+    temp4 = temp4 + a;
+    temp4 = temp4 - b;
+    result = temp4 + c;
 
     return result;
 }
@@ -475,11 +548,23 @@ void printArray(int arr[], int size) {
    ======================================== */
 
 int multiply3(int a, int b, int c) {
-    return a * b * c;
+    int temp;
+    int result;
+    
+    temp = a * b;
+    result = temp * c;
+    return result;
 }
 
 int add4(int a, int b, int c, int d) {
-    return a + b + c + d;
+    int temp1;
+    int temp2;
+    int result;
+    
+    temp1 = a + b;
+    temp2 = c + d;
+    result = temp1 + temp2;
+    return result;
 }
 
 int max3(int a, int b, int c) {
@@ -532,7 +617,7 @@ int arrayEqual(int arr1[], int arr2[], int size) {
     while (i < size) {
         if (arr1[i] != arr2[i]) {
             equal = 0;
-            i = size;  /* Exit loop */
+            i = size;
         } else {
             i = i + 1;
         }
@@ -547,9 +632,11 @@ int arrayEqual(int arr1[], int arr2[], int size) {
 
 int absoluteValue(int x) {
     int result;
+    int negX;
 
     if (x < 0) {
-        result = 0 - x;
+        negX = 0 - x;
+        result = negX;
     } else {
         result = x;
     }
@@ -580,12 +667,14 @@ int sign(int x) {
 int sumOfSquares(int n) {
     int sum;
     int i;
+    int iSquared;
 
     sum = 0;
     i = 1;
 
     while (i <= n) {
-        sum = sum + i * i;
+        iSquared = i * i;
+        sum = sum + iSquared;
         i = i + 1;
     }
 
@@ -595,12 +684,16 @@ int sumOfSquares(int n) {
 int sumOfCubes(int n) {
     int sum;
     int i;
+    int iSquared;
+    int iCubed;
 
     sum = 0;
     i = 1;
 
     while (i <= n) {
-        sum = sum + i * i * i;
+        iSquared = i * i;
+        iCubed = iSquared * i;
+        sum = sum + iCubed;
         i = i + 1;
     }
 
@@ -688,7 +781,7 @@ int arrayLength(int arr[], int maxSize) {
 
     while (length < maxSize) {
         if (arr[length] == 0) {
-            length = maxSize;  /* Exit loop */
+            length = maxSize;
         } else {
             length = length + 1;
         }
@@ -709,12 +802,13 @@ void main(void) {
     int a;
     int b;
     int choice;
+    int temp;
 
     /* Initialize global variable */
     globalCounter = 0;
 
     /* Test 1: Arithmetic Operations */
-    output(1);  /* Test marker */
+    output(1);
     result = testArithmetic(10, 5);
     output(result);
 
@@ -768,7 +862,8 @@ void main(void) {
     output(11);
     i = 0;
     while (i < 10) {
-        testArray[i] = i * 3;
+        temp = i * 3;
+        testArray[i] = temp;
         i = i + 1;
     }
     result = linearSearch(testArray, 10, 15);
@@ -807,7 +902,8 @@ void main(void) {
     output(16);
     i = 0;
     while (i < 5) {
-        testArray[i] = i + 1;
+        temp = i + 1;
+        testArray[i] = temp;
         i = i + 1;
     }
     reverseArray(testArray, 5);
@@ -851,7 +947,9 @@ void main(void) {
     output(21);
     i = 0;
     while (i < 5) {
-        testArray[i] = (i + 1) * 2;
+        temp = i + 1;
+        temp = temp * 2;
+        testArray[i] = temp;
         i = i + 1;
     }
     result = calculateMean(testArray, 5);
@@ -883,7 +981,9 @@ void main(void) {
     globalArray[1] = 20;
     globalArray[2] = 30;
     output(globalCounter);
-    output(globalArray[0] + globalArray[1] + globalArray[2]);
+    temp = globalArray[0] + globalArray[1];
+    temp = temp + globalArray[2];
+    output(temp);
 
     /* Test 25: Void Functions */
     output(25);

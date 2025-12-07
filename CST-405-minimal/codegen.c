@@ -3,29 +3,41 @@
 #include <string.h>
 #include "codegen.h"
 #include "symtab.h"
+#include "parser.tab.h"  // Add this to get token definitions
+
 
 FILE* output;
 int tempReg = 0;
 
 int getNextTemp() {
-    int reg = tempReg++;
-    if (tempReg > 7) tempReg = 0;  // Reuse $t0-$t7
+    int reg = tempReg;
+    tempReg++;
+    if (tempReg > 7) tempReg = 0;
     return reg;
+}
+
+int getPrevTemp() {
+    // Safe way to get the previously allocated temp register
+    int prev = tempReg - 1;
+    if (prev < 0) prev = 7;  // Wrap around to $t7
+    return prev;
 }
 
 void genExpr(ASTNode* node) {
     if (!node) return;
     
+    int resultReg;
+    
     switch(node->type) {
         case NODE_NUM:
-            fprintf(output, "    li $t%d, %d\n", getNextTemp(), node->data.num);
+            resultReg = getNextTemp();
+            fprintf(output, "    li $t%d, %d\n", resultReg, node->data.num);
             break;
-        
-        case NODE_FLOAT_NUM: {
-            int reg = getNextTemp();
-            fprintf(output, "    li.d $f%d, %.6f\n", reg * 2, node->data.fnum);  /* Use even FP registers */
+            
+        case NODE_FLOAT_NUM:
+            resultReg = getNextTemp();
+            fprintf(output, "    li.s $f%d, %.2f\n", resultReg, node->data.fnum);
             break;
-        }
             
         case NODE_VAR: {
             Symbol* sym = lookupSymbol(node->data.name);
@@ -33,221 +45,140 @@ void genExpr(ASTNode* node) {
                 fprintf(stderr, "Error: Variable %s not declared\n", node->data.name);
                 exit(1);
             }
-            // Check if the symbol found is actually in global scope (not just same name)
-            int isGlobal = 0;
-            for (int i = 0; i < symtab.globalScope->count; i++) {
-                if (&symtab.globalScope->symbols[i] == sym) {
-                    isGlobal = 1;
+            resultReg = getNextTemp();
+            fprintf(output, "    lw $t%d, %d($sp)\n", resultReg, sym->offset);
+            break;
+        }
+        
+        case NODE_BINOP: {
+            // Generate code for left operand
+            genExpr(node->data.binop.left);
+            int leftReg = getPrevTemp();
+            
+            // Generate code for right operand
+            genExpr(node->data.binop.right);
+            int rightReg = getPrevTemp();
+            
+            // Get register for result
+            resultReg = getNextTemp();
+            
+            switch(node->data.binop.op) {
+                case '+':
+                    fprintf(output, "    add $t%d, $t%d, $t%d\n", resultReg, leftReg, rightReg);
                     break;
-                }
+                case '-':
+                    fprintf(output, "    sub $t%d, $t%d, $t%d\n", resultReg, leftReg, rightReg);
+                    break;
+                case '*':
+                    fprintf(output, "    mul $t%d, $t%d, $t%d\n", resultReg, leftReg, rightReg);
+                    break;
+                case '/':
+                    fprintf(output, "    div $t%d, $t%d, $t%d\n", resultReg, leftReg, rightReg);
+                    break;
+                case '%':
+                    fprintf(output, "    rem $t%d, $t%d, $t%d\n", resultReg, leftReg, rightReg);
+                    break;
+                case '<':
+                    fprintf(output, "    slt $t%d, $t%d, $t%d\n", resultReg, leftReg, rightReg);
+                    break;
+                case '>':
+                    fprintf(output, "    sgt $t%d, $t%d, $t%d\n", resultReg, leftReg, rightReg);
+                    break;
+                case EQ:
+                    fprintf(output, "    seq $t%d, $t%d, $t%d\n", resultReg, leftReg, rightReg);
+                    break;
+                case NEQ:
+                    fprintf(output, "    sne $t%d, $t%d, $t%d\n", resultReg, leftReg, rightReg);
+                    break;
+                case LE:
+                    fprintf(output, "    sle $t%d, $t%d, $t%d\n", resultReg, leftReg, rightReg);
+                    break;
+                case GE:
+                    fprintf(output, "    sge $t%d, $t%d, $t%d\n", resultReg, leftReg, rightReg);
+                    break;
+                case AND:
+                    fprintf(output, "    and $t%d, $t%d, $t%d\n", resultReg, leftReg, rightReg);
+                    break;
+                case OR:
+                    fprintf(output, "    or $t%d, $t%d, $t%d\n", resultReg, leftReg, rightReg);
+                    break;
+                default:
+                    fprintf(stderr, "Unknown binary operator: %c\n", node->data.binop.op);
+                    break;
             }
-            if (isGlobal) {
-                fprintf(output, "    lw $t%d, %d($s7)\n", getNextTemp(), sym->offset);
-            } else {
-                fprintf(output, "    lw $t%d, %d($sp)\n", getNextTemp(), sym->offset);
+            break;
+        }
+
+        case NODE_UNARY_OP: {
+            // Generate code for the operand
+            genExpr(node->data.unary_op.operand);
+            int operandReg = getPrevTemp();
+            
+            // Get register for result
+            resultReg = getNextTemp();
+            
+            switch(node->data.unary_op.op) {
+                case '-':  // Unary negation
+                    fprintf(output, "    li $t%d, 0\n", resultReg);
+                    fprintf(output, "    sub $t%d, $t%d, $t%d\n", resultReg, resultReg, operandReg);
+                    break;
+                case NOT:  // Logical NOT
+                    fprintf(output, "    seq $t%d, $t%d, $zero\n", resultReg, operandReg);
+                    break;
+                default:
+                    fprintf(stderr, "Unknown unary operator: %c\n", node->data.unary_op.op);
+                    break;
             }
             break;
         }
         
-        case NODE_BINOP:
-            /* Handle unary NOT operator */
-            if (node->data.binop.op == '!' && node->data.binop.right == NULL) {
-                genExpr(node->data.binop.left);
-                int reg = tempReg - 1;
-                fprintf(output, "    seq $t%d, $t%d, $zero\n", reg, reg);
-                break;
-            }
-
-            genExpr(node->data.binop.left);
-            int leftReg = tempReg - 1;
-            genExpr(node->data.binop.right);
-            int rightReg = tempReg - 1;
-
-            switch(node->data.binop.op) {
-                case '+':
-                    fprintf(output, "    add $t%d, $t%d, $t%d\n", leftReg, leftReg, rightReg);
-                    break;
-                case '-':
-                    fprintf(output, "    sub $t%d, $t%d, $t%d\n", leftReg, leftReg, rightReg);
-                    break;
-                case '*':
-                    fprintf(output, "    mul $t%d, $t%d, $t%d\n", leftReg, leftReg, rightReg);
-                    break;
-                case '/':
-                    fprintf(output, "    div $t%d, $t%d, $t%d\n", leftReg, leftReg, rightReg);
-                    break;
-                case '%':
-                    // Modulo: use div then mfhi to get remainder
-                    fprintf(output, "    div $t%d, $t%d\n", leftReg, rightReg);
-                    fprintf(output, "    mfhi $t%d\n", leftReg);  // Get remainder from HI register
-                    break;
-                case '<':
-                    // Less than: result is 1 if left < right, 0 otherwise
-                    fprintf(output, "    slt $t%d, $t%d, $t%d\n", leftReg, leftReg, rightReg);
-                    break;
-                case '>':
-                    // Greater than: result is 1 if left > right, 0 otherwise
-                    fprintf(output, "    slt $t%d, $t%d, $t%d\n", leftReg, rightReg, leftReg);
-                    break;
-                case '=':
-                    // Equality: result is 1 if left == right, 0 otherwise
-                    fprintf(output, "    seq $t%d, $t%d, $t%d\n", leftReg, leftReg, rightReg);
-                    break;
-                case '&':
-                    // Logical AND: result is 1 if both are non-zero, 0 otherwise
-                    fprintf(output, "    sne $t%d, $t%d, $zero\n", leftReg, leftReg);
-                    fprintf(output, "    sne $t%d, $t%d, $zero\n", rightReg, rightReg);
-                    fprintf(output, "    and $t%d, $t%d, $t%d\n", leftReg, leftReg, rightReg);
-                    break;
-                case '|':
-                    // Logical OR: result is 1 if either is non-zero, 0 otherwise
-                    fprintf(output, "    or $t%d, $t%d, $t%d\n", leftReg, leftReg, rightReg);
-                    fprintf(output, "    sne $t%d, $t%d, $zero\n", leftReg, leftReg);
-                    break;
-            }
-
-            tempReg = leftReg + 1;
-            break;
-
         case NODE_ARRAY_ACCESS: {
-            // Generate code for array element access: arr[index]
-            Symbol* arrSym = lookupSymbol(node->data.array_access.name);
-            if (!arrSym) {
+            // Array access: arr[index]
+            Symbol* sym = lookupSymbol(node->data.array_access.name);
+            if (!sym) {
                 fprintf(stderr, "Error: Array %s not declared\n", node->data.array_access.name);
                 exit(1);
             }
-            int offset = arrSym->offset;
-
-            // Compute index
+            
+            // Calculate index
             genExpr(node->data.array_access.index);
-            int indexReg = tempReg - 1;
-
-            // Check if array is global
-            int isGlobal = 0;
-            if (symtab.globalScope) {
-                for (int i = 0; i < symtab.globalScope->count; i++) {
-                    if (&symtab.globalScope->symbols[i] == arrSym) {
-                        isGlobal = 1;
-                        break;
-                    }
-                }
-            }
-
-            // Calculate address: base_offset + (index * 4)
-            fprintf(output, "    # Array access: %s[index]\n", node->data.array_access.name);
-            fprintf(output, "    sll $t%d, $t%d, 2\n", indexReg, indexReg);      // index * 4
-            if (isGlobal) {
-                fprintf(output, "    add $t%d, $t%d, $s7\n", indexReg, indexReg);    // addr = (index*4) + $s7 (global)
-            } else {
-                fprintf(output, "    add $t%d, $t%d, $sp\n", indexReg, indexReg);    // addr = (index*4) + $sp (local)
-            }
-            fprintf(output, "    lw $t%d, %d($t%d)\n", indexReg, offset, indexReg);  // load from offset(addr)
+            int indexReg = getPrevTemp();
+            
+            resultReg = getNextTemp();
+            fprintf(output, "    # Array access: arr[index]\n");
+            fprintf(output, "    sll $t%d, $t%d, 2\n", indexReg, indexReg);
+            fprintf(output, "    add $t%d, $t%d, $sp\n", indexReg, indexReg);
+            fprintf(output, "    lw $t%d, %d($t%d)\n", resultReg, sym->offset, indexReg);
             break;
         }
-
-        case NODE_ARRAY_2D_ACCESS: {
-            // Generate code for 2D array access: matrix[row][col]
-            int offset = getVarOffset(node->data.array_2d_access.name);
-            if (offset == -1) {
-                fprintf(stderr, "Error: Array %s not declared\n", node->data.array_2d_access.name);
-                exit(1);
-            }
-
-            // Address = base + (row * cols + col) * 4
-            // Assuming 2x2 matrix for simplicity
-
-            genExpr(node->data.array_2d_access.row);
-            int rowReg = tempReg - 1;
-            genExpr(node->data.array_2d_access.col);
-            int colReg = tempReg - 1;
-
-            fprintf(output, "    # 2D Array access: %s[row][col]\n", node->data.array_2d_access.name);
-            fprintf(output, "    sll $t%d, $t%d, 1\n", rowReg, rowReg);          // row * 2
-            fprintf(output, "    add $t%d, $t%d, $t%d\n", rowReg, rowReg, colReg); // row*2 + col
-            fprintf(output, "    sll $t%d, $t%d, 2\n", rowReg, rowReg);          // * 4 for bytes
-            fprintf(output, "    add $t%d, $t%d, $sp\n", rowReg, rowReg);        // + $sp
-            fprintf(output, "    lw $t%d, %d($t%d)\n", rowReg, offset, rowReg);  // load from offset(addr)
-            tempReg = rowReg + 1;
-            break;
-        }
-
+        
         case NODE_CALL_EXPR: {
-            // Function call as an expression - similar to NODE_CALL but result stays in register
+            // Function call as expression
             ASTNode* arg = node->data.call_expr.args;
             int argNum = 0;
-
+            
             while (arg && argNum < 4) {
-                genExpr(arg);
-                fprintf(output, "    move $a%d, $t%d\n", argNum, tempReg - 1);
-                argNum++;
-                // For expressions, we don't have a next pointer like statements
-                break;
+                if (arg->type == NODE_ARG_LIST) {
+                    genExpr(arg->data.arg_list.arg);
+                    fprintf(output, "    move $a%d, $t%d\n", argNum, getPrevTemp());
+                    argNum++;
+                    arg = arg->data.arg_list.next;
+                } else {
+                    genExpr(arg);
+                    fprintf(output, "    move $a%d, $t%d\n", argNum, getPrevTemp());
+                    argNum++;
+                    break;
+                }
             }
-
-            // Call function and result will be in $v0
+            
             fprintf(output, "    jal %s\n", node->data.call_expr.funcName);
-            // Move result to next temp register
-            int resultReg = getNextTemp();
+            resultReg = getNextTemp();
             fprintf(output, "    move $t%d, $v0\n", resultReg);
             break;
         }
-
-        case NODE_MULTI_VALUE_CHECK: {
-            /* Multi-value equality check: expr is val1, val2, val3
-             * Generates: (expr == val1) || (expr == val2) || (expr == val3)
-             * Uses stack to preserve the expression value across multiple comparisons
-             */
-            fprintf(output, "    # Multi-value check: expr is values...\n");
-
-            // Generate code for the expression being checked
-            genExpr(node->data.multiValueCheck.expr);
-            int exprReg = tempReg - 1;
-
-            // Save expression value to stack to prevent register clobbering
-            fprintf(output, "    addi $sp, $sp, -4\n");
-            fprintf(output, "    sw $t%d, 0($sp)\n", exprReg);
-
-            // Process value list and build OR chain
-            ASTNode* valueNode = node->data.multiValueCheck.values;
-            int resultReg = -1;
-            int firstComparison = 1;
-
-            while (valueNode != NULL) {
-                // Reload expression from stack
-                fprintf(output, "    lw $t0, 0($sp)\n");
-
-                // Generate code for current value
-                genExpr(valueNode->data.valueList.value);
-                int valueReg = (tempReg == 0) ? 7 : (tempReg - 1);
-
-                // Compare: savedExpr == value
-                int cmpReg = getNextTemp();
-                fprintf(output, "    seq $t%d, $t0, $t%d\n", cmpReg, valueReg);
-
-                if (firstComparison) {
-                    // First comparison becomes the initial result
-                    resultReg = cmpReg;
-                    firstComparison = 0;
-                } else {
-                    // OR this comparison with previous result
-                    int orReg = getNextTemp();
-                    fprintf(output, "    or $t%d, $t%d, $t%d\n", orReg, resultReg, cmpReg);
-                    fprintf(output, "    sne $t%d, $t%d, $zero\n", orReg, orReg);
-                    resultReg = orReg;
-                }
-
-                // Move to next value
-                valueNode = valueNode->data.valueList.next;
-            }
-
-            // Restore stack pointer
-            fprintf(output, "    addi $sp, $sp, 4\n");
-
-            tempReg = resultReg + 1;
-            break;
-        }
-
+        
         default:
+            fprintf(stderr, "Unknown expression node type: %d\n", node->type);
             break;
     }
 }
@@ -280,33 +211,20 @@ void genStmt(ASTNode* node) {
         }
         
         case NODE_ASSIGN: {
+            genExpr(node->data.assign.value);
             Symbol* sym = lookupSymbol(node->data.assign.var);
             if (!sym) {
                 fprintf(stderr, "Error: Variable %s not declared\n", node->data.assign.var);
                 exit(1);
             }
-            genExpr(node->data.assign.value);
-            // Check if the symbol found is actually in global scope (not just same name)
-            int isGlobal = 0;
-            for (int i = 0; i < symtab.globalScope->count; i++) {
-                if (&symtab.globalScope->symbols[i] == sym) {
-                    isGlobal = 1;
-                    break;
-                }
-            }
-            if (isGlobal) {
-                fprintf(output, "    sw $t%d, %d($s7)\n", tempReg - 1, sym->offset);
-            } else {
-                fprintf(output, "    sw $t%d, %d($sp)\n", tempReg - 1, sym->offset);
-            }
-            tempReg = 0;
+            fprintf(output, "    sw $t%d, %d($sp)\n", getPrevTemp(), sym->offset);
             break;
         }
         
         case NODE_PRINT:
             genExpr(node->data.expr);
             fprintf(output, "    # Print integer\n");
-            fprintf(output, "    move $a0, $t%d\n", tempReg - 1);
+            fprintf(output, "    move $a0, $t%d\n", getPrevTemp());
             fprintf(output, "    li $v0, 1\n");
             fprintf(output, "    syscall\n");
             fprintf(output, "    # Print newline\n");
@@ -317,8 +235,13 @@ void genStmt(ASTNode* node) {
             break;
             
         case NODE_STMT_LIST:
-            genStmt(node->data.stmtlist.stmt);
-            genStmt(node->data.stmtlist.next);
+            // Process both the current statement and continue to next
+            if (node->data.stmtlist.stmt) {
+                genStmt(node->data.stmtlist.stmt);
+            }
+            if (node->data.stmtlist.next) {
+                genStmt(node->data.stmtlist.next);
+            }
             break;
 
         case NODE_WHILE: {
@@ -328,8 +251,9 @@ void genStmt(ASTNode* node) {
             fprintf(output, "Lwhile_%d:\n", id);
 
             genExpr(node->data.ifstmt.condition);
-            fprintf(output, "    # while condition result in $t%d\n", tempReg - 1);
-            fprintf(output, "    beq $t%d, $zero, Lend_while_%d\n", tempReg - 1, id);
+            int condReg = getPrevTemp();
+            fprintf(output, "    # while condition result in $t%d\n", condReg);
+            fprintf(output, "    beq $t%d, $zero, Lend_while_%d\n", condReg, id);
             tempReg = 0;
 
             genStmt(node->data.ifstmt.thenBlock);
@@ -351,8 +275,9 @@ void genStmt(ASTNode* node) {
 
             // Evaluate condition
             genExpr(node->data.forstmt.condition);
-            fprintf(output, "    # for condition result in $t%d\n", tempReg - 1);
-            fprintf(output, "    beq $t%d, $zero, Lend_for_%d\n", tempReg - 1, id);
+            int condReg = getPrevTemp();
+            fprintf(output, "    # for condition result in $t%d\n", condReg);
+            fprintf(output, "    beq $t%d, $zero, Lend_for_%d\n", condReg, id);
             tempReg = 0;
 
             // Execute body
@@ -369,51 +294,46 @@ void genStmt(ASTNode* node) {
 
         case NODE_IF: {
             /* if (cond) then */
-            int id = globalIfCounter++;
-
+            static int ifCounter = 0;
+            int currentIf = ifCounter++;
+            
             genExpr(node->data.ifstmt.condition);
-            fprintf(output, "    # if condition result in $t%d\n", tempReg - 1);
-            fprintf(output, "    beq $t%d, $zero, Lend_if_%d\n", tempReg - 1, id);
-            tempReg = 0;
-
+            int condReg = getPrevTemp();
+            fprintf(output, "    # if condition result in $t%d\n", condReg);
+            fprintf(output, "    beq $t%d, $zero, Lend_if_%d\n", condReg, currentIf);
             genStmt(node->data.ifstmt.thenBlock);
-            fprintf(output, "Lend_if_%d:\n", id);
+            fprintf(output, "Lend_if_%d:\n", currentIf);
             break;
         }
-
+        
         case NODE_IF_ELSE: {
-            /* if (cond) then else */
-            int id = globalIfCounter++;
-
+            int currentIf = globalIfCounter++;
+            
             genExpr(node->data.ifstmt.condition);
-            fprintf(output, "    # if-else condition result in $t%d\n", tempReg - 1);
-            fprintf(output, "    beq $t%d, $zero, Lelse_%d\n", tempReg - 1, id);
-            tempReg = 0;
-
+            int condReg = getPrevTemp();
+            fprintf(output, "    # if-else condition result in $t%d\n", condReg);
+            fprintf(output, "    beq $t%d, $zero, Lelse_%d\n", condReg, currentIf);
             genStmt(node->data.ifstmt.thenBlock);
-            fprintf(output, "    j Lend_if_%d\n", id);
-            fprintf(output, "Lelse_%d:\n", id);
+            fprintf(output, "    j Lend_if_%d\n", currentIf);
+            fprintf(output, "Lelse_%d:\n", currentIf);
             genStmt(node->data.ifstmt.elseBlock);
-            fprintf(output, "Lend_if_%d:\n", id);
+            fprintf(output, "Lend_if_%d:\n", currentIf);
             break;
         }
-
+        
         case NODE_DECL_INIT: {
-            // Declaration with initialization: int x = 5;
-            int offset = addVar(node->data.decl_init.name, TYPE_INT);
-            if (offset == -1) {
-                fprintf(stderr, "Error: Variable %s already declared\n", node->data.decl_init.name);
+            Symbol* sym = lookupSymbol(node->data.decl_init.name);
+            if (!sym) {
+                fprintf(stderr, "Error: Variable %s not declared\n", node->data.decl_init.name);
                 exit(1);
             }
-            fprintf(output, "    # Declared and initialized int %s at offset %d\n",
-                    node->data.decl_init.name, offset);
+            fprintf(output, "    # Declared int %s at offset %d\n", 
+                    node->data.decl_init.name, sym->offset);
             genExpr(node->data.decl_init.value);
-            // Always use $sp for local declarations within functions
-            fprintf(output, "    sw $t%d, %d($sp)\n", tempReg - 1, offset);
-            tempReg = 0;
+            fprintf(output, "    sw $t%d, %d($sp)\n", getPrevTemp(), sym->offset);
             break;
         }
-
+        
         case NODE_ARRAY_DECL: {
             // Allocate space for 1D array
             int size = node->data.array_decl.size;
@@ -442,11 +362,11 @@ void genStmt(ASTNode* node) {
 
             // Evaluate value first
             genExpr(node->data.array_assign.value);
-            int valueReg = tempReg - 1;
+            int valueReg = getPrevTemp();
 
             // Evaluate index
             genExpr(node->data.array_assign.index);
-            int indexReg = tempReg - 1;
+            int indexReg = getPrevTemp();
 
             // Check if array is global
             int isGlobal = 0;
@@ -460,14 +380,14 @@ void genStmt(ASTNode* node) {
             }
 
             // Calculate address and store
-            fprintf(output, "    # Array assignment: %s[index] = value\n", node->data.array_assign.name);
-            fprintf(output, "    sll $t%d, $t%d, 2\n", indexReg, indexReg);     // index * 4
+            fprintf(output, "    # Array assignment: arr[index] = value\n");
+            fprintf(output, "    sll $t%d, $t%d, 2\n", indexReg, indexReg);
             if (isGlobal) {
-                fprintf(output, "    add $t%d, $t%d, $s7\n", indexReg, indexReg);   // addr = (index*4) + $s7 (global)
+                fprintf(output, "    add $t%d, $t%d, $s7\n", indexReg, indexReg);
             } else {
-                fprintf(output, "    add $t%d, $t%d, $sp\n", indexReg, indexReg);   // addr = (index*4) + $sp (local)
+                fprintf(output, "    add $t%d, $t%d, $sp\n", indexReg, indexReg);
             }
-            fprintf(output, "    sw $t%d, %d($t%d)\n", valueReg, offset, indexReg);  // store at offset(addr)
+            fprintf(output, "    sw $t%d, %d($t%d)\n", valueReg, offset, indexReg);
             tempReg = 0;
             break;
         }
@@ -502,80 +422,104 @@ void genStmt(ASTNode* node) {
 
             // Evaluate value
             genExpr(node->data.array_2d_assign.value);
-            int valueReg = tempReg - 1;
+            int valueReg = getPrevTemp();
 
             // Evaluate row and column indices
             genExpr(node->data.array_2d_assign.row);
-            int rowReg = tempReg - 1;
+            int rowReg = getPrevTemp();
             genExpr(node->data.array_2d_assign.col);
-            int colReg = tempReg - 1;
+            int colReg = getPrevTemp();
 
             // Calculate address: base + (row * cols + col) * 4
             fprintf(output, "    # 2D Array assignment: %s[row][col] = value\n",
                     node->data.array_2d_assign.name);
-            fprintf(output, "    sll $t%d, $t%d, 1\n", rowReg, rowReg);          // row * 2
-            fprintf(output, "    add $t%d, $t%d, $t%d\n", rowReg, rowReg, colReg); // + col
-            fprintf(output, "    sll $t%d, $t%d, 2\n", rowReg, rowReg);          // * 4 for bytes
-            fprintf(output, "    add $t%d, $t%d, $sp\n", rowReg, rowReg);        // + $sp
-            fprintf(output, "    sw $t%d, %d($t%d)\n", valueReg, offset, rowReg);  // store at offset(addr)
+            fprintf(output, "    sll $t%d, $t%d, 1\n", rowReg, rowReg);
+            fprintf(output, "    add $t%d, $t%d, $t%d\n", rowReg, rowReg, colReg);
+            fprintf(output, "    sll $t%d, $t%d, 2\n", rowReg, rowReg);
+            fprintf(output, "    add $t%d, $t%d, $sp\n", rowReg, rowReg);
+            fprintf(output, "    sw $t%d, %d($t%d)\n", valueReg, offset, rowReg);
             tempReg = 0;
             break;
         }
         
-        /* IF/ELSE codegen disabled - skip these node types if encountered 
-        case NODE_IF:
-        case NODE_IF_ELSE:
-            If/Else behavior intentionally disabled; no code emitted. 
-            break; */
         case NODE_FUNCTION: {
-            char* funcName = node->data.function.name;
-            // Rename user's main to _user_main to avoid conflict with setup code
-            char* actualName = (strcmp(funcName, "main") == 0) ? "_user_main" : funcName;
-            fprintf(output, "\n# Function: %s returns %s\n", funcName, node->data.function.returnType);
-            fprintf(output, "%s:\n", actualName);
-
-            /* Prologue: save $ra and $fp, allocate space for locals */
-            fprintf(output, "    addi $sp, $sp, -408\n");  /* 8 for $ra/$fp + 400 for locals */
+            fprintf(output, "\n# Function: %s returns %s\n", 
+                    node->data.function.name, node->data.function.returnType);
+            fprintf(output, "%s:\n", node->data.function.name);
+            
+            // Create new scope for function
+            pushScope();
+            
+            // Prologue
+            fprintf(output, "    addi $sp, $sp, -408\n");
             fprintf(output, "    sw $ra, 404($sp)\n");
             fprintf(output, "    sw $fp, 400($sp)\n");
             fprintf(output, "    move $fp, $sp\n");
-
-            /* Enter function scope */
-            enterScope();
-
-            /* Add parameters to symbol table and save from $a registers */
+            
+            // Save parameters AND add them to symbol table
             ASTNode* param = node->data.function.params;
+            int paramOffset = 8;
             int paramNum = 0;
-            while (param) {
-                int offset = addParameter(param->data.parameter.name, param->data.parameter.type);
-                if (offset != -1 && paramNum < 4) {
-                    fprintf(output, "    sw $a%d, %d($sp)\n", paramNum, offset);
+            
+            while (param && paramNum < 4) {
+                // Get parameter name
+                char* paramName = NULL;
+                if (param->type == NODE_PARAMETER) {
+                    paramName = param->data.parameter.name;
+                } else if (param->type == NODE_STMT_LIST) {
+                    if (param->data.stmtlist.stmt && 
+                        param->data.stmtlist.stmt->type == NODE_PARAMETER) {
+                        paramName = param->data.stmtlist.stmt->data.parameter.name;
+                    }
                 }
-                paramNum++;
-                param = param->data.parameter.next;
+                
+                if (paramName) {
+                    // Save parameter to stack
+                    fprintf(output, "    sw $a%d, %d($sp)\n", paramNum, paramOffset);
+                    
+                    // Add parameter to symbol table at the same offset
+                    Symbol* paramSym = addSymbol(paramName, TYPE_INT);
+                    if (paramSym) {
+                        paramSym->offset = paramOffset;
+                    }
+                    
+                    paramOffset += 4;
+                    paramNum++;
+                }
+                
+                // Move to next parameter
+                if (param->type == NODE_STMT_LIST) {
+                    param = param->data.stmtlist.next;
+                } else {
+                    break;
+                }
             }
-
-            /* Generate body */
-            genStmt(node->data.function.body);
-
-            /* Epilogue: restore and return */
-            fprintf(output, "    move $sp, $fp\n");
+            
+            // Generate function body
+            if (node->data.function.body) {
+                genStmt(node->data.function.body);
+            }
+            
+            // Pop function scope
+            popScope();
+            
+            // Epilogue
             fprintf(output, "    lw $fp, 400($sp)\n");
             fprintf(output, "    lw $ra, 404($sp)\n");
             fprintf(output, "    addi $sp, $sp, 408\n");
             fprintf(output, "    jr $ra\n");
-
-            /* Exit function scope */
-            exitScope();
             break;
         }
         
         case NODE_RETURN: {
-            if (node->data.returnstmt.value) {
-                genExpr(node->data.returnstmt.value);
-                fprintf(output, "    move $v0, $t%d\n", tempReg - 1);
+            if (node->data.expr) {
+                genExpr(node->data.expr);
+                fprintf(output, "    move $v0, $t%d\n", getPrevTemp());
             }
-            /* Jump to epilogue (you may need labels for this) */
+            fprintf(output, "    lw $fp, 400($sp)\n");
+            fprintf(output, "    lw $ra, 404($sp)\n");
+            fprintf(output, "    addi $sp, $sp, 408\n");
+            fprintf(output, "    jr $ra\n");
             break;
         }
         
@@ -584,15 +528,27 @@ void genStmt(ASTNode* node) {
             ASTNode* arg = node->data.call.args;
             int argNum = 0;
 
+            // Handle NODE_ARG_LIST chain
             while (arg && argNum < 4) {
-                genExpr(arg);
-                fprintf(output, "    move $a%d, $t%d\n", argNum, tempReg - 1);
-                argNum++;
-                arg = arg->data.stmtlist.next;
+                if (arg->type == NODE_ARG_LIST) {
+                    // Evaluate the current argument
+                    genExpr(arg->data.arg_list.arg);
+                    fprintf(output, "    move $a%d, $t%d\n", argNum, getPrevTemp());
+                    argNum++;
+                    // Move to next argument in the list
+                    arg = arg->data.arg_list.next;
+                } else {
+                    // Single argument (not in a list)
+                    genExpr(arg);
+                    fprintf(output, "    move $a%d, $t%d\n", argNum, getPrevTemp());
+                    argNum++;
+                    break;
+                }
             }
 
             /* Call function */
             fprintf(output, "    jal %s\n", node->data.call.funcName);
+            tempReg = 0;
             break;
         }
 
@@ -644,7 +600,7 @@ void genStmt(ASTNode* node) {
             }
             fprintf(output, "    # Global int %s = init at offset %d\n", node->data.decl_init.name, offset);
             genExpr(node->data.decl_init.value);
-            fprintf(output, "    sw $t%d, %d($sp)\n", tempReg - 1, offset);
+            fprintf(output, "    sw $t%d, %d($sp)\n", getPrevTemp(), offset);
             tempReg = 0;
             break;
         }
@@ -688,7 +644,7 @@ void genStmt(ASTNode* node) {
 
             // Evaluate the switch expression
             genExpr(node->data.switchstmt.expr);
-            int exprReg = tempReg - 1;
+            int exprReg = getPrevTemp();
             fprintf(output, "    # switch expression result in $t%d\n", exprReg);
 
             // Create end label for the entire switch
@@ -705,13 +661,12 @@ void genStmt(ASTNode* node) {
                     // Generate comparison for this case
                     fprintf(output, "    # case %d:\n", caseNode->data.casestmt.value);
                     fprintf(output, "    li $t%d, %d\n", getNextTemp(), caseNode->data.casestmt.value);
-                    int valueReg = tempReg - 1;
+                    int valueReg = getPrevTemp();
                     fprintf(output, "    beq $t%d, $t%d, Lcase_%d_%d\n", exprReg, valueReg, id, caseNum);
                     caseNum++;
                     caseNode = caseNode->data.casestmt.next;
                 } else if (caseNode->type == NODE_DEFAULT) {
                     hasDefault = 1;
-                    // DEFAULT doesn't have a next field, it's the end of the list
                     break;
                 } else {
                     break;
@@ -743,7 +698,6 @@ void genStmt(ASTNode* node) {
                         genStmt(caseNode->data.defaultstmt.body);
                     }
                     fprintf(output, "    j %s\n", endLabel);
-                    // DEFAULT doesn't have a next field, it's the end of the list
                     break;
                 } else {
                     break;
@@ -757,7 +711,6 @@ void genStmt(ASTNode* node) {
 
         case NODE_BREAK:
             // Break is handled by jumps to end labels in switch/while/for
-            // No code generation needed here as it's implicit in the control flow
             break;
 
         default:
@@ -768,100 +721,29 @@ void genStmt(ASTNode* node) {
 void generateMIPS(ASTNode* root, const char* filename) {
     output = fopen(filename, "w");
     if (!output) {
-        fprintf(stderr, "Cannot open output file %s\n", filename);
-        exit(1);
+        perror("Cannot open output file");
+        return;
     }
 
-    // Initialize symbol table
     initSymTab();
 
-    // MIPS program header
     fprintf(output, ".data\n");
     fprintf(output, "\n.text\n");
     fprintf(output, ".globl main\n\n");
 
-    // Check if root is a program node or old-style statement list
-    if (root && root->type == NODE_PROGRAM) {
-        // Check if we have real functions or just an implicit main
-        int hasRealFunctions = 0;
-        ASTNode* funcNode = root->data.program.functions;
-
-        // Check if functions contain actual user-defined functions (not just implicit main)
-        if (funcNode && funcNode->type == NODE_FUNCTION_LIST) {
-            hasRealFunctions = 1;
-        } else if (funcNode && funcNode->type == NODE_FUNCTION) {
-            // Single function - check if it has calls or is just implicit main
-            // For now, assume if it's named "main" and we have it as a single function with globals, it's implicit
-            if (root->data.program.globals != NULL) {
-                // Old style: globals + implicit main
-                hasRealFunctions = 0;
-            } else {
-                hasRealFunctions = 1;
-            }
-        }
-
-        if (!hasRealFunctions) {
-            // Old style: generate everything inline
-            fprintf(output, "main:\n");
-            fprintf(output, "    # Allocate stack space\n");
-            fprintf(output, "    addi $sp, $sp, -400\n");
-            fprintf(output, "    move $s7, $sp    # Save global base pointer in $s7\n\n");
-
-            // Process globals
-            if (root->data.program.globals) {
-                genStmt(root->data.program.globals);
-            }
-
-            // Process main body inline (without function frame)
-            if (funcNode && funcNode->type == NODE_FUNCTION) {
-                enterScope();
-                genStmt(funcNode->data.function.body);
-                exitScope();
-            }
-
-            // Exit
-            fprintf(output, "\n    # Exit program\n");
-            fprintf(output, "    addi $sp, $sp, 400\n");
-            fprintf(output, "    li $v0, 10\n");
-            fprintf(output, "    syscall\n");
+    // Process all top-level declarations and functions
+    ASTNode* current = root;
+    while (current) {
+        if (current->type == NODE_STMT_LIST) {
+            // Process the statement in this node
+            genStmt(current->data.stmtlist.stmt);
+            // Move to next item in list
+            current = current->data.stmtlist.next;
         } else {
-            // New style with real functions
-            // MARS starts at 'main', so we make main do the setup
-            fprintf(output, "main:\n");
-            fprintf(output, "    # Allocate space for global variables\n");
-            fprintf(output, "    addi $sp, $sp, -400\n");
-            fprintf(output, "    move $s7, $sp    # Save global base pointer in $s7\n\n");
-
-            // Process global declarations and initializations
-            if (root->data.program.globals) {
-                genStmt(root->data.program.globals);
-            }
-
-            // Jump to user's actual main function (renamed to _user_main internally)
-            fprintf(output, "    jal _user_main\n");
-            fprintf(output, "\n");
-            fprintf(output, "    # Exit program\n");
-            fprintf(output, "    addi $sp, $sp, 400\n");
-            fprintf(output, "    li $v0, 10\n");
-            fprintf(output, "    syscall\n\n");
-
-            // Generate all function definitions (rename main to _user_main)
-            if (root->data.program.functions) {
-                genStmt(root->data.program.functions);
-            }
+            // Single top-level item (not in a list)
+            genStmt(current);
+            break;
         }
-    } else {
-        // Old style: just statement list (backward compatibility)
-        fprintf(output, "main:\n");
-        fprintf(output, "    # Allocate stack space\n");
-        fprintf(output, "    addi $sp, $sp, -400\n\n");
-
-        genStmt(root);
-
-        fprintf(output, "\n    # Exit program\n");
-        fprintf(output, "    addi $sp, $sp, 400\n");
-        fprintf(output, "    li $v0, 10\n");
-        fprintf(output, "    syscall\n");
     }
 
     fclose(output);

@@ -1,7 +1,7 @@
 %{
 /* SYNTAX ANALYZER (PARSER)
  * Enhanced with proper global and function scope support
- * This version allows global declarations and function definitions
+ * CONFLICT-FREE VERSION
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,7 +11,7 @@
 extern int yylex();
 extern int yyparse();
 extern FILE* yyin;
-extern int yylineno;  /* Line number from scanner */
+extern int yylineno;
 
 void yyerror(const char* s);
 ASTNode* root = NULL;
@@ -28,11 +28,13 @@ ASTNode* root = NULL;
 %token <num> NUM
 %token <fnum> FLOAT_NUM
 %token <str> ID
-%token INT DOUBLE PRINT WHILE FOR IF ELSE VOID RETURN MAIN
-%token LBRACE RBRACE LPAREN RPAREN LBRACKET RBRACKET COMMA
+%token INT VOID DOUBLE OUTPUT INPUT
+%token LPAREN RPAREN LBRACE RBRACE SEMICOLON LBRACKET RBRACKET
+%token COMMA
+%token MAIN RETURN PRINT WHILE FOR IF ELSE
 
 /* Logical operators */
-%token AND OR NOT EQ LE GE
+%token AND OR NOT EQ LE GE NEQ
 
 /* Multi-value equality */
 %token IS
@@ -41,165 +43,129 @@ ASTNode* root = NULL;
 %token SWITCH CASE DEFAULT BREAK COLON
 
 /* NON-TERMINAL TYPES */
-%type <node> program function_list function_decl param_list
-%type <node> global_decl_list global_decl
+%type <node> program top_level_list top_level_item
+%type <node> function_decl param_list non_empty_param_list param
+%type <node> global_decl
 %type <node> stmt_list stmt decl assign expr print_stmt while_stmt for_stmt if_stmt
-%type <node> value_list
+%type <node> value_list arg_list
 %type <node> switch_stmt case_list case_stmt
+%type <node> block
 
-/* OPERATOR PRECEDENCE */
+/* OPERATOR PRECEDENCE - From lowest to highest precedence */
+%nonassoc LOWER_THAN_ELSE
+%nonassoc ELSE
+%right IS
 %left OR
 %left AND
-%right NOT UMINUS
-%left EQ NEQ LE GE '<' '>'
+%left EQ NEQ
+%left '<' '>' LE GE
 %left '+' '-'
 %left '*' '/' '%'
+%right UMINUS
+%right NOT
+%left LBRACKET
+%left LPAREN
 
 %%
 
-/* ============================================
-   PROGRAM STRUCTURE - Top level with global scope
-   ============================================ */
-
 program:
-    global_decl_list function_list {
-        /* Program consists of optional global declarations followed by functions */
-        $$ = createProgram($1, $2);
-        root = $$;
-    }
-    | function_list {
-        /* Program with only functions, no global variables */
-        $$ = createProgram(NULL, $1);
-        root = $$;
-    }
-    | stmt_list {
-        /* Old style: statements only - wrap in implicit main() */
-        ASTNode* mainFunc = createFunction("main", "int", NULL, $1);
-        $$ = createProgram(NULL, mainFunc);
-        root = $$;
-    }
-    | global_decl_list stmt_list {
-        /* Old style with globals: wrap statements in implicit main() */
-        ASTNode* mainFunc = createFunction("main", "int", NULL, $2);
-        $$ = createProgram($1, mainFunc);
+    top_level_list {
+        $$ = $1;
         root = $$;
     }
     ;
 
-/* GLOBAL DECLARATIONS - Variables declared outside functions */
-global_decl_list:
+top_level_list:
+    top_level_item {
+        $$ = $1;
+    }
+    | top_level_list top_level_item {
+        $$ = createStmtList($1, $2);
+    }
+    ;
+
+top_level_item:
     global_decl {
         $$ = $1;
     }
-    | global_decl_list global_decl {
-        $$ = createStmtList($1, $2);
+    | function_decl {
+        $$ = $1;
     }
     ;
 
 global_decl:
     INT ID ';' {
-        /* Global variable: int x; */
         $$ = createGlobalDecl($2);
         free($2);
     }
     | DOUBLE ID ';' {
-        /* Global double: double x; */
         $$ = createGlobalDeclDouble($2);
         free($2);
     }
     | INT ID '=' expr ';' {
-        /* Global with initialization: int x = 10; */
         $$ = createGlobalDeclInit($2, $4);
         free($2);
     }
     | INT ID LBRACKET NUM RBRACKET ';' {
-        /* Global 1D array: int arr[10]; */
         $$ = createGlobalArrayDecl($2, $4);
         free($2);
     }
     | INT ID LBRACKET NUM RBRACKET LBRACKET NUM RBRACKET ';' {
-        /* Global 2D array: int matrix[5][5]; */
         $$ = createGlobalArray2DDecl($2, $4, $7);
         free($2);
     }
     ;
 
-/* ============================================
-   FUNCTION DECLARATIONS - Function scope
-   ============================================ */
-
-function_list:
-    function_decl {
-        $$ = $1;
-    }
-    | function_list function_decl {
-        $$ = createFunctionList($1, $2);
-    }
-    ;
-
 function_decl:
-    INT ID LPAREN param_list RPAREN LBRACE stmt_list RBRACE {
-        /* int function_name(params) { body } */
+    INT MAIN LPAREN param_list RPAREN LBRACE stmt_list RBRACE {
+        $$ = createFunction("main", "int", $4, $7);
+        /* Note: "main" is hardcoded string, not freed */
+    }
+    | VOID MAIN LPAREN param_list RPAREN LBRACE stmt_list RBRACE {
+        $$ = createFunction("main", "void", $4, $7);
+    }
+    | INT ID LPAREN param_list RPAREN LBRACE stmt_list RBRACE {
         $$ = createFunction($2, "int", $4, $7);
-        free($2);
+        free($2);  /* Following ownership pattern from copilot instructions */
     }
     | VOID ID LPAREN param_list RPAREN LBRACE stmt_list RBRACE {
-        /* void function_name(params) { body } */
         $$ = createFunction($2, "void", $4, $7);
         free($2);
     }
-    | INT MAIN LPAREN RPAREN LBRACE stmt_list RBRACE {
-        /* Special case: int main() { body } */
-        $$ = createFunction("main", "int", NULL, $6);
+    ;
+
+/* Ensure param_list handles void properly */
+param_list:
+    /* empty */ {
+        $$ = NULL;
     }
-    | VOID MAIN LPAREN RPAREN LBRACE stmt_list RBRACE {
-        /* void main() { body } */
-        $$ = createFunction("main", "void", NULL, $6);
+    | VOID {
+        $$ = NULL;
+    }
+    | non_empty_param_list {
+        $$ = $1;
     }
     ;
 
-/* PARAMETER LIST */
-param_list:
+non_empty_param_list:
+    param {
+        $$ = $1;
+    }
+    | non_empty_param_list COMMA param {
+        $$ = createStmtList($1, $3);
+    }
+    ;
+
+param:
     INT ID {
         $$ = createParameter($2, "int", NULL);
         free($2);
-    }
-    | DOUBLE ID {
-        $$ = createParameter($2, "double", NULL);
-        free($2);
-    }
-    | param_list COMMA INT ID {
-        $$ = createParameter($4, "int", $1);
-        free($4);
-    }
-    | param_list COMMA DOUBLE ID {
-        $$ = createParameter($4, "double", $1);
-        free($4);
     }
     | INT ID LBRACKET RBRACKET {
         $$ = createParameter($2, "int[]", NULL);
         free($2);
     }
-    | DOUBLE ID LBRACKET RBRACKET {
-        $$ = createParameter($2, "double[]", NULL);
-        free($2);
-    }
-    | param_list COMMA INT ID LBRACKET RBRACKET {
-        $$ = createParameter($4, "int", $1);
-        free($4);
-    }
-    | param_list COMMA DOUBLE ID LBRACKET RBRACKET {
-        $$ = createParameter($4, "double", $1);
-        free($4);
-    }
-    | /* empty */ {
-        $$ = NULL;
-    }
     ;
-
-/* ============================================
-   STATEMENTS - Inside function scope
-   ============================================ */
 
 stmt_list:
     stmt {
@@ -218,6 +184,9 @@ stmt:
     | for_stmt
     | if_stmt
     | switch_stmt
+    | block {
+        $$ = $1;
+    }
     | BREAK ';' {
         $$ = createBreak();
     }
@@ -227,19 +196,14 @@ stmt:
     | RETURN ';' {
         $$ = createReturn(NULL);
     }
-    | ID LPAREN expr RPAREN ';' {
-        /* Function call with argument */
-        $$ = createCall($1, $3);
-        free($1);
+    | OUTPUT LPAREN expr RPAREN ';' {
+        $$ = createOutput($3);
     }
-    | ID LPAREN RPAREN ';' {
-        /* Function call without arguments */
-        $$ = createCall($1, NULL);
-        free($1);
+    | expr ';' {
+        $$ = $1;  // Allow expression statements (void function calls)
     }
     ;
 
-/* LOCAL DECLARATIONS - Variables inside functions */
 decl:
     INT ID ';' {
         $$ = createDecl($2);
@@ -263,7 +227,6 @@ decl:
     }
     ;
 
-/* ASSIGNMENT */
 assign:
     ID '=' expr ';' {
         $$ = createAssign($1, $3);
@@ -279,10 +242,6 @@ assign:
     }
     ;
 
-/* ============================================
-   EXPRESSIONS
-   ============================================ */
-
 expr:
     NUM {
         $$ = createNum($1);
@@ -292,6 +251,25 @@ expr:
     }
     | ID {
         $$ = createVar($1);
+        free($1);
+    }
+    | INPUT LPAREN RPAREN {
+        $$ = createInput();
+    }
+    | ID LPAREN RPAREN {
+        $$ = createCallExpr($1, NULL);
+        free($1);
+    }
+    | ID LPAREN arg_list RPAREN {
+        $$ = createCallExpr($1, $3);
+        free($1);
+    }
+    | ID LBRACKET expr RBRACKET {
+        $$ = createArrayAccess($1, $3);
+        free($1);
+    }
+    | ID LBRACKET expr RBRACKET LBRACKET expr RBRACKET {
+        $$ = createArray2DAccess($1, $3, $6);
         free($1);
     }
     | expr '+' expr {
@@ -316,7 +294,10 @@ expr:
         $$ = createBinOp('>', $1, $3);
     }
     | expr EQ expr {
-        $$ = createBinOp('=', $1, $3);
+        $$ = createBinOp(EQ, $1, $3);
+    }
+    | expr NEQ expr {
+        $$ = createBinOp(NEQ, $1, $3);
     }
     | expr LE expr {
         $$ = createBinOp(LE, $1, $3);
@@ -324,71 +305,53 @@ expr:
     | expr GE expr {
         $$ = createBinOp(GE, $1, $3);
     }
-    | expr NEQ expr {
-        $$ = createBinOp(NEQ, $1, $3);
-    }
     | expr AND expr {
-        $$ = createBinOp('&', $1, $3);
+        $$ = createBinOp(AND, $1, $3);
     }
     | expr OR expr {
-        $$ = createBinOp('|', $1, $3);
+        $$ = createBinOp(OR, $1, $3);
     }
     | NOT expr {
-        /* Logical NOT unary operator */
-        $$ = createBinOp('!', $2, NULL);
+        $$ = createUnaryOp(NOT, $2);
+    }
+    | '-' expr %prec UMINUS {
+        $$ = createUnaryOp('-', $2);
     }
     | LPAREN expr RPAREN {
         $$ = $2;
     }
-    | LBRACE stmt_list RBRACE {
-        $$ = $2;
+    ;
+
+value_list:
+    expr {
+        $$ = createValueList($1, NULL);
     }
-    | ID LBRACKET expr RBRACKET {
-        $$ = createArrayAccess($1, $3);
-        free($1);
-    }
-    | ID LBRACKET expr RBRACKET LBRACKET expr RBRACKET {
-        $$ = createArray2DAccess($1, $3, $6);
-        free($1);
-    }
-    | ID LPAREN expr RPAREN {
-        /* Function call with argument as expression */
-        $$ = createCallExpr($1, $3);
-        free($1);
-    }
-    | ID LPAREN RPAREN {
-        /* Function call without arguments as expression */
-        $$ = createCallExpr($1, NULL);
-        free($1);
-    }
-    | expr IS value_list {
-        /* Multi-value equality check: expr is val1, val2, val3 */
-        $$ = createMultiValueCheck($1, $3);
-    }
-    | '-' expr %prec UMINUS  { 
-        /* Desugar -Expr into 0 - Expr */
-        $$ = createBinOp('-', createNum(0), $2); 
+    | value_list COMMA expr {
+        $$ = createValueList($3, $1);
     }
     ;
 
-/* PRINT STATEMENT */
+arg_list:
+    expr {
+        $$ = $1;
+    }
+    | arg_list COMMA expr {
+        $$ = createArgList($1, $3);
+    }
+    ;
+
 print_stmt:
     PRINT LPAREN expr RPAREN ';' {
         $$ = createPrint($3);
     }
     ;
 
-/* WHILE STATEMENT */
 while_stmt:
     WHILE LPAREN expr RPAREN stmt {
         $$ = createWhile($3, $5);
     }
-    | WHILE LPAREN expr RPAREN LBRACE stmt_list RBRACE {
-        $$ = createWhile($3, $6);
-    }
     ;
 
-/* FOR STATEMENT */
 for_stmt:
     FOR LPAREN ID '=' expr ';' expr ';' ID '=' expr RPAREN stmt {
         ASTNode* init = createAssign($3, $5);
@@ -397,37 +360,17 @@ for_stmt:
         free($3);
         free($9);
     }
-    | FOR LPAREN ID '=' expr ';' expr ';' ID '=' expr RPAREN LBRACE stmt_list RBRACE {
-        ASTNode* init = createAssign($3, $5);
-        ASTNode* update = createAssign($9, $11);
-        $$ = createFor(init, $7, update, $14);
-        free($3);
-        free($9);
-    }
     ;
 
 if_stmt:
-    IF LPAREN expr RPAREN stmt {
+    IF LPAREN expr RPAREN stmt %prec LOWER_THAN_ELSE {
         $$ = createIf($3, $5);
-    }
-    | IF LPAREN expr RPAREN LBRACE stmt_list RBRACE {
-        $$ = createIf($3, $6);
     }
     | IF LPAREN expr RPAREN stmt ELSE stmt {
         $$ = createIfElse($3, $5, $7);
     }
-    | IF LPAREN expr RPAREN LBRACE stmt_list RBRACE ELSE stmt {
-        $$ = createIfElse($3, $6, $9);
-    }
-    | IF LPAREN expr RPAREN stmt ELSE LBRACE stmt_list RBRACE {
-        $$ = createIfElse($3, $5, $8);
-    }
-    | IF LPAREN expr RPAREN LBRACE stmt_list RBRACE ELSE LBRACE stmt_list RBRACE {
-        $$ = createIfElse($3, $6, $10);
-    }
     ;
 
-/* SWITCH-CASE STATEMENT */
 switch_stmt:
     SWITCH LPAREN expr RPAREN LBRACE case_list RBRACE {
         $$ = createSwitch($3, $6);
@@ -459,15 +402,12 @@ case_stmt:
     }
     ;
 
-/* VALUE LIST for multi-value equality check */
-value_list:
-    expr {
-        /* Single value */
-        $$ = createValueList($1, NULL);
+block:
+    LBRACE stmt_list RBRACE {
+        $$ = $2;  /* Block is just a statement list wrapper */
     }
-    | expr COMMA value_list {
-        /* Multiple values */
-        $$ = createValueList($1, $3);
+    | LBRACE RBRACE {
+        $$ = NULL;  /* Empty block */
     }
     ;
 

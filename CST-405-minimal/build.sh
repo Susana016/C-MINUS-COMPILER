@@ -27,7 +27,7 @@ if [ $? -eq 0 ]; then
     echo "Running test with arrays..."
   #  ./minicompiler test.c output.s
    # ./minicompiler while_test.c output_while.s
-   ./minicompiler test_logical_ops.c test.s
+   ./minicompiler comprehensive_test_class.c test.s
 
     echo ""
     echo "Generated MIPS code saved to comprehensive.s"

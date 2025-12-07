@@ -32,7 +32,7 @@ ASTNode* createVar(char* name) {
 }
 
 /* Create a binary operation node (for addition) */
-ASTNode* createBinOp(char op, ASTNode* left, ASTNode* right) {
+ASTNode* createBinOp(int op, ASTNode* left, ASTNode* right) {
     ASTNode* node = malloc(sizeof(ASTNode));
     node->type = NODE_BINOP;
     node->data.binop.op = op;        /* Store operator (+) */
@@ -356,6 +356,41 @@ ASTNode* createDefault(ASTNode* body) {
 ASTNode* createBreak() {
     ASTNode* node = malloc(sizeof(ASTNode));
     node->type = NODE_BREAK;
+    return node;
+}
+
+/* Built-in function constructors */
+ASTNode* createOutput(ASTNode* expr) {
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_CALL;
+    node->data.call.funcName = strdup("output");
+    node->data.call.args = expr;
+    return node;
+}
+
+ASTNode* createInput(void) {
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_CALL_EXPR;
+    node->data.call_expr.funcName = strdup("input");
+    node->data.call_expr.args = NULL;
+    return node;
+}
+
+/* Create a unary operation node */
+ASTNode* createUnaryOp(int op, ASTNode* operand) {
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_UNARY_OP;
+    node->data.unary_op.op = op;
+    node->data.unary_op.operand = operand;
+    return node;
+}
+
+/* Create an argument list node (for multi-arg function calls) */
+ASTNode* createArgList(ASTNode* arg, ASTNode* next) {
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_ARG_LIST;
+    node->data.arg_list.arg = arg;
+    node->data.arg_list.next = next;
     return node;
 }
 

@@ -43,36 +43,40 @@
      FLOAT_NUM = 259,
      ID = 260,
      INT = 261,
-     DOUBLE = 262,
-     PRINT = 263,
-     WHILE = 264,
-     FOR = 265,
-     IF = 266,
-     ELSE = 267,
-     VOID = 268,
-     RETURN = 269,
-     MAIN = 270,
-     LBRACE = 271,
-     RBRACE = 272,
-     LPAREN = 273,
-     RPAREN = 274,
-     LBRACKET = 275,
-     RBRACKET = 276,
-     COMMA = 277,
-     AND = 278,
-     OR = 279,
-     NOT = 280,
-     EQ = 281,
-     LE = 282,
-     GE = 283,
-     IS = 284,
-     SWITCH = 285,
-     CASE = 286,
-     DEFAULT = 287,
-     BREAK = 288,
-     COLON = 289,
-     UMINUS = 290,
-     NEQ = 291
+     VOID = 262,
+     DOUBLE = 263,
+     OUTPUT = 264,
+     INPUT = 265,
+     LPAREN = 266,
+     RPAREN = 267,
+     LBRACE = 268,
+     RBRACE = 269,
+     SEMICOLON = 270,
+     LBRACKET = 271,
+     RBRACKET = 272,
+     COMMA = 273,
+     MAIN = 274,
+     RETURN = 275,
+     PRINT = 276,
+     WHILE = 277,
+     FOR = 278,
+     IF = 279,
+     ELSE = 280,
+     AND = 281,
+     OR = 282,
+     NOT = 283,
+     EQ = 284,
+     LE = 285,
+     GE = 286,
+     NEQ = 287,
+     IS = 288,
+     SWITCH = 289,
+     CASE = 290,
+     DEFAULT = 291,
+     BREAK = 292,
+     COLON = 293,
+     LOWER_THAN_ELSE = 294,
+     UMINUS = 295
    };
 #endif
 /* Tokens.  */
@@ -80,36 +84,40 @@
 #define FLOAT_NUM 259
 #define ID 260
 #define INT 261
-#define DOUBLE 262
-#define PRINT 263
-#define WHILE 264
-#define FOR 265
-#define IF 266
-#define ELSE 267
-#define VOID 268
-#define RETURN 269
-#define MAIN 270
-#define LBRACE 271
-#define RBRACE 272
-#define LPAREN 273
-#define RPAREN 274
-#define LBRACKET 275
-#define RBRACKET 276
-#define COMMA 277
-#define AND 278
-#define OR 279
-#define NOT 280
-#define EQ 281
-#define LE 282
-#define GE 283
-#define IS 284
-#define SWITCH 285
-#define CASE 286
-#define DEFAULT 287
-#define BREAK 288
-#define COLON 289
-#define UMINUS 290
-#define NEQ 291
+#define VOID 262
+#define DOUBLE 263
+#define OUTPUT 264
+#define INPUT 265
+#define LPAREN 266
+#define RPAREN 267
+#define LBRACE 268
+#define RBRACE 269
+#define SEMICOLON 270
+#define LBRACKET 271
+#define RBRACKET 272
+#define COMMA 273
+#define MAIN 274
+#define RETURN 275
+#define PRINT 276
+#define WHILE 277
+#define FOR 278
+#define IF 279
+#define ELSE 280
+#define AND 281
+#define OR 282
+#define NOT 283
+#define EQ 284
+#define LE 285
+#define GE 286
+#define NEQ 287
+#define IS 288
+#define SWITCH 289
+#define CASE 290
+#define DEFAULT 291
+#define BREAK 292
+#define COLON 293
+#define LOWER_THAN_ELSE 294
+#define UMINUS 295
 
 
 
@@ -124,7 +132,7 @@ typedef union YYSTYPE
     struct ASTNode* node;
 }
 /* Line 1529 of yacc.c.  */
-#line 128 "parser.tab.h"
+#line 136 "parser.tab.h"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1
