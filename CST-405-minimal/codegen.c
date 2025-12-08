@@ -153,7 +153,17 @@ void genExpr(ASTNode* node) {
         }
         
         case NODE_CALL_EXPR: {
-            // Function call as expression
+            // Check if this is built-in 'input' function
+            if (strcmp(node->data.call_expr.funcName, "input") == 0) {
+                resultReg = getNextTemp();
+                fprintf(output, "    # Read integer\n");
+                fprintf(output, "    li $v0, 5\n");
+                fprintf(output, "    syscall\n");
+                fprintf(output, "    move $t%d, $v0\n", resultReg);
+                break;
+            }
+            
+            // Regular function call as expression
             ASTNode* arg = node->data.call_expr.args;
             int argNum = 0;
             
@@ -176,10 +186,18 @@ void genExpr(ASTNode* node) {
             fprintf(output, "    move $t%d, $v0\n", resultReg);
             break;
         }
-        
-        default:
-            fprintf(stderr, "Unknown expression node type: %d\n", node->type);
-            break;
+    }
+}
+
+// Helper function to flatten parameter list (add before genStmt)
+static void flattenParamList(ASTNode* node, ASTNode** paramArray, int* count, int maxParams) {
+    if (!node || *count >= maxParams) return;
+    
+    if (node->type == NODE_STMT_LIST) {
+        flattenParamList(node->data.stmtlist.stmt, paramArray, count, maxParams);
+        flattenParamList(node->data.stmtlist.next, paramArray, count, maxParams);
+    } else if (node->type == NODE_PARAMETER) {
+        paramArray[(*count)++] = node;
     }
 }
 
@@ -187,7 +205,7 @@ void genStmt(ASTNode* node) {
     if (!node) return;
 
     /* Shared counter for all if/if-else statements to prevent duplicate labels */
-    static int globalIfCounter = 0;
+    static int ifCounter = 0;
 
     switch(node->type) {
         case NODE_DECL: {
@@ -294,7 +312,6 @@ void genStmt(ASTNode* node) {
 
         case NODE_IF: {
             /* if (cond) then */
-            static int ifCounter = 0;
             int currentIf = ifCounter++;
             
             genExpr(node->data.ifstmt.condition);
@@ -307,7 +324,7 @@ void genStmt(ASTNode* node) {
         }
         
         case NODE_IF_ELSE: {
-            int currentIf = globalIfCounter++;
+            int currentIf = ifCounter++;
             
             genExpr(node->data.ifstmt.condition);
             int condReg = getPrevTemp();
@@ -322,20 +339,22 @@ void genStmt(ASTNode* node) {
         }
         
         case NODE_DECL_INIT: {
-            Symbol* sym = lookupSymbol(node->data.decl_init.name);
-            if (!sym) {
-                fprintf(stderr, "Error: Variable %s not declared\n", node->data.decl_init.name);
+            // First, declare the variable (add to symbol table)
+            int offset = addVar(node->data.decl_init.name, TYPE_INT);
+            if (offset == -1) {
+                fprintf(stderr, "Error: Variable %s already declared\n", node->data.decl_init.name);
                 exit(1);
             }
             fprintf(output, "    # Declared int %s at offset %d\n", 
-                    node->data.decl_init.name, sym->offset);
+                    node->data.decl_init.name, offset);
+            
+            // Then, initialize it with the value
             genExpr(node->data.decl_init.value);
-            fprintf(output, "    sw $t%d, %d($sp)\n", getPrevTemp(), sym->offset);
+            fprintf(output, "    sw $t%d, %d($sp)\n", getPrevTemp(), offset);
             break;
         }
         
         case NODE_ARRAY_DECL: {
-            // Allocate space for 1D array
             int size = node->data.array_decl.size;
             int offset = addVar(node->data.array_decl.name, TYPE_INT);
             if (offset == -1) {
@@ -344,9 +363,15 @@ void genStmt(ASTNode* node) {
             }
             fprintf(output, "    # Declared array %s[%d] at offset %d\n", 
                     node->data.array_decl.name, size, offset);
-            // Reserve additional space for array elements (size-1 more slots)
+            
+            // Mark as array
+            Symbol* sym = lookupSymbol(node->data.array_decl.name);
+            if (sym) {
+                sym->isArray = 1;  // ADD THIS!
+            }
+            
             for (int i = 1; i < size; i++) {
-                addVar("", TYPE_INT); // Reserve space without name
+                addVar("", TYPE_INT);
             }
             break;
         }
@@ -393,54 +418,75 @@ void genStmt(ASTNode* node) {
         }
 
         case NODE_ARRAY_2D_DECL: {
-            // Allocate space for 2D array
-            int rows = node->data.array_2d_decl.rows;
-            int cols = node->data.array_2d_decl.cols;
-            int totalSize = rows * cols;
-            
-            int offset = addVar(node->data.array_2d_decl.name, TYPE_INT);
-            if (offset == -1) {
-                fprintf(stderr, "Error: Array %s already declared\n", node->data.array_2d_decl.name);
-                exit(1);
-            }
-            fprintf(output, "    # Declared 2D array %s[%d][%d] at offset %d\n", 
-                    node->data.array_2d_decl.name, rows, cols, offset);
-            // Reserve space for all elements
-            for (int i = 1; i < totalSize; i++) {
-                addVar("", TYPE_INT);
-            }
-            break;
+        int rows = node->data.array_2d_decl.rows;
+        int cols = node->data.array_2d_decl.cols;
+        int totalSize = rows * cols;
+        
+        int offset = addVar(node->data.array_2d_decl.name, TYPE_INT);
+        if (offset == -1) {
+            fprintf(stderr, "Error: Array %s already declared\n", node->data.array_2d_decl.name);
+            exit(1);
         }
-
-        case NODE_ARRAY_2D_ASSIGN: {
-            // 2D array assignment: matrix[row][col] = value;
-            int offset = getVarOffset(node->data.array_2d_assign.name);
-            if (offset == -1) {
-                fprintf(stderr, "Error: Array %s not declared\n", node->data.array_2d_assign.name);
-                exit(1);
-            }
-
-            // Evaluate value
-            genExpr(node->data.array_2d_assign.value);
-            int valueReg = getPrevTemp();
-
-            // Evaluate row and column indices
-            genExpr(node->data.array_2d_assign.row);
-            int rowReg = getPrevTemp();
-            genExpr(node->data.array_2d_assign.col);
-            int colReg = getPrevTemp();
-
-            // Calculate address: base + (row * cols + col) * 4
-            fprintf(output, "    # 2D Array assignment: %s[row][col] = value\n",
-                    node->data.array_2d_assign.name);
-            fprintf(output, "    sll $t%d, $t%d, 1\n", rowReg, rowReg);
-            fprintf(output, "    add $t%d, $t%d, $t%d\n", rowReg, rowReg, colReg);
-            fprintf(output, "    sll $t%d, $t%d, 2\n", rowReg, rowReg);
-            fprintf(output, "    add $t%d, $t%d, $sp\n", rowReg, rowReg);
-            fprintf(output, "    sw $t%d, %d($t%d)\n", valueReg, offset, rowReg);
-            tempReg = 0;
-            break;
+        fprintf(output, "    # Declared 2D array %s[%d][%d] at offset %d\n", 
+                node->data.array_2d_decl.name, rows, cols, offset);
+        
+        // Mark as array - ADD THIS!
+        Symbol* sym = lookupSymbol(node->data.array_2d_decl.name);
+        if (sym) {
+            sym->isArray = 1;
         }
+        
+        for (int i = 1; i < totalSize; i++) {
+            addVar("", TYPE_INT);
+        }
+        break;
+    }
+
+    case NODE_GLOBAL_ARRAY_DECL: {
+        int size = node->data.array_decl.size;
+        int offset = addVar(node->data.array_decl.name, TYPE_INT);
+        if (offset == -1) {
+            fprintf(stderr, "Error: Global array %s already declared\n", node->data.array_decl.name);
+            exit(1);
+        }
+        fprintf(output, "    # Global array %s[%d] at offset %d\n",
+                node->data.array_decl.name, size, offset);
+        
+        // Mark as array - ADD THIS!
+        Symbol* sym = lookupSymbol(node->data.array_decl.name);
+        if (sym) {
+            sym->isArray = 1;
+        }
+        
+        for (int i = 1; i < size; i++) {
+            addVar("", TYPE_INT);
+        }
+        break;
+    }
+
+    case NODE_GLOBAL_ARRAY_2D_DECL: {
+        int rows = node->data.array_2d_decl.rows;
+        int cols = node->data.array_2d_decl.cols;
+        int totalSize = rows * cols;
+        int offset = addVar(node->data.array_2d_decl.name, TYPE_INT);
+        if (offset == -1) {
+            fprintf(stderr, "Error: Global array %s already declared\n", node->data.array_2d_decl.name);
+            exit(1);
+        }
+        fprintf(output, "    # Global 2D array %s[%d][%d] at offset %d\n",
+                node->data.array_2d_decl.name, rows, cols, offset);
+        
+        // Mark as array - ADD THIS!
+        Symbol* sym = lookupSymbol(node->data.array_2d_decl.name);
+        if (sym) {
+            sym->isArray = 1;
+        }
+        
+        for (int i = 1; i < totalSize; i++) {
+            addVar("", TYPE_INT);
+        }
+        break;
+    }
         
         case NODE_FUNCTION: {
             fprintf(output, "\n# Function: %s returns %s\n", 
@@ -456,43 +502,24 @@ void genStmt(ASTNode* node) {
             fprintf(output, "    sw $fp, 400($sp)\n");
             fprintf(output, "    move $fp, $sp\n");
             
-            // Save parameters AND add them to symbol table
-            ASTNode* param = node->data.function.params;
-            int paramOffset = 8;
-            int paramNum = 0;
+            // Flatten parameter list
+            ASTNode* paramArray[4] = {NULL, NULL, NULL, NULL};
+            int paramCount = 0;
+            flattenParamList(node->data.function.params, paramArray, &paramCount, 4);
             
-            while (param && paramNum < 4) {
-                // Get parameter name
-                char* paramName = NULL;
-                if (param->type == NODE_PARAMETER) {
-                    paramName = param->data.parameter.name;
-                } else if (param->type == NODE_STMT_LIST) {
-                    if (param->data.stmtlist.stmt && 
-                        param->data.stmtlist.stmt->type == NODE_PARAMETER) {
-                        paramName = param->data.stmtlist.stmt->data.parameter.name;
-                    }
+            // Add all parameters to symbol table
+            int paramOffset = 8;
+            for (int i = 0; i < paramCount; i++) {
+                // Save parameter to stack
+                fprintf(output, "    sw $a%d, %d($sp)\n", i, paramOffset);
+                
+                // Add to symbol table
+                Symbol* paramSym = addSymbol(paramArray[i]->data.parameter.name, TYPE_INT);
+                if (paramSym) {
+                    paramSym->offset = paramOffset;
                 }
                 
-                if (paramName) {
-                    // Save parameter to stack
-                    fprintf(output, "    sw $a%d, %d($sp)\n", paramNum, paramOffset);
-                    
-                    // Add parameter to symbol table at the same offset
-                    Symbol* paramSym = addSymbol(paramName, TYPE_INT);
-                    if (paramSym) {
-                        paramSym->offset = paramOffset;
-                    }
-                    
-                    paramOffset += 4;
-                    paramNum++;
-                }
-                
-                // Move to next parameter
-                if (param->type == NODE_STMT_LIST) {
-                    param = param->data.stmtlist.next;
-                } else {
-                    break;
-                }
+                paramOffset += 4;
             }
             
             // Generate function body
@@ -524,26 +551,71 @@ void genStmt(ASTNode* node) {
         }
         
         case NODE_CALL: {
-            /* Load arguments into $a0-$a3 */
+            // Check if this is the built-in 'output' function
+            if (strcmp(node->data.call.funcName, "output") == 0) {
+                // Generate syscall for output instead of function call
+                ASTNode* arg = node->data.call.args;
+                
+                if (arg) {
+                    // Handle single argument or arg list
+                    if (arg->type == NODE_ARG_LIST) {
+                        genExpr(arg->data.arg_list.arg);
+                    } else {
+                        genExpr(arg);
+                    }
+                    
+                    fprintf(output, "    # Print integer\n");
+                    fprintf(output, "    move $a0, $t%d\n", getPrevTemp());
+                    fprintf(output, "    li $v0, 1\n");
+                    fprintf(output, "    syscall\n");
+                    fprintf(output, "    # Print newline\n");
+                    fprintf(output, "    li $v0, 11\n");
+                    fprintf(output, "    li $a0, 10\n");
+                    fprintf(output, "    syscall\n");
+                }
+                tempReg = 0;
+                break;
+            }
+            
+            // Check if this is the built-in 'input' function
+            if (strcmp(node->data.call.funcName, "input") == 0) {
+                fprintf(output, "    # Read integer\n");
+                fprintf(output, "    li $v0, 5\n");
+                fprintf(output, "    syscall\n");
+                tempReg = 0;
+                break;
+            }
+            
+            /* Regular function call - load arguments into $a0-$a3 */
             ASTNode* arg = node->data.call.args;
             int argNum = 0;
 
-            // Handle NODE_ARG_LIST chain
             while (arg && argNum < 4) {
+                ASTNode* currentArg = NULL;
+                
                 if (arg->type == NODE_ARG_LIST) {
-                    // Evaluate the current argument
-                    genExpr(arg->data.arg_list.arg);
-                    fprintf(output, "    move $a%d, $t%d\n", argNum, getPrevTemp());
-                    argNum++;
-                    // Move to next argument in the list
+                    currentArg = arg->data.arg_list.arg;
                     arg = arg->data.arg_list.next;
                 } else {
-                    // Single argument (not in a list)
-                    genExpr(arg);
-                    fprintf(output, "    move $a%d, $t%d\n", argNum, getPrevTemp());
-                    argNum++;
-                    break;
+                    currentArg = arg;
+                    arg = NULL;
                 }
+                
+                // Check if this argument is an array
+                if (currentArg && currentArg->type == NODE_VAR) {
+                    Symbol* sym = lookupSymbol(currentArg->data.name);
+                    if (sym && sym->isArray) {  // CHECK isArray!
+                        fprintf(output, "    # Pass array address: %s\n", currentArg->data.name);
+                        fprintf(output, "    addi $a%d, $sp, %d\n", argNum, sym->offset);
+                        argNum++;
+                        continue;
+                    }
+                }
+                
+                // Regular argument - evaluate and pass value
+                genExpr(currentArg);
+                fprintf(output, "    move $a%d, $t%d\n", argNum, getPrevTemp());
+                argNum++;
             }
 
             /* Call function */
@@ -602,38 +674,6 @@ void genStmt(ASTNode* node) {
             genExpr(node->data.decl_init.value);
             fprintf(output, "    sw $t%d, %d($sp)\n", getPrevTemp(), offset);
             tempReg = 0;
-            break;
-        }
-
-        case NODE_GLOBAL_ARRAY_DECL: {
-            int size = node->data.array_decl.size;
-            int offset = addVar(node->data.array_decl.name, TYPE_INT);
-            if (offset == -1) {
-                fprintf(stderr, "Error: Global array %s already declared\n", node->data.array_decl.name);
-                exit(1);
-            }
-            fprintf(output, "    # Global array %s[%d] at offset %d\n",
-                    node->data.array_decl.name, size, offset);
-            for (int i = 1; i < size; i++) {
-                addVar("", TYPE_INT);
-            }
-            break;
-        }
-
-        case NODE_GLOBAL_ARRAY_2D_DECL: {
-            int rows = node->data.array_2d_decl.rows;
-            int cols = node->data.array_2d_decl.cols;
-            int totalSize = rows * cols;
-            int offset = addVar(node->data.array_2d_decl.name, TYPE_INT);
-            if (offset == -1) {
-                fprintf(stderr, "Error: Global array %s already declared\n", node->data.array_2d_decl.name);
-                exit(1);
-            }
-            fprintf(output, "    # Global 2D array %s[%d][%d] at offset %d\n",
-                    node->data.array_2d_decl.name, rows, cols, offset);
-            for (int i = 1; i < totalSize; i++) {
-                addVar("", TYPE_INT);
-            }
             break;
         }
 
@@ -709,6 +749,13 @@ void genStmt(ASTNode* node) {
             break;
         }
 
+        case NODE_CALL_EXPR: {
+            // Function call used as a statement
+            genExpr(node);
+            tempReg = 0;
+            break;
+        }
+
         case NODE_BREAK:
             // Break is handled by jumps to end labels in switch/while/for
             break;
@@ -729,18 +776,27 @@ void generateMIPS(ASTNode* root, const char* filename) {
 
     fprintf(output, ".data\n");
     fprintf(output, "\n.text\n");
-    fprintf(output, ".globl main\n\n");
+    fprintf(output, ".globl main\n");
+    
+    // Initialize global base pointer
+    fprintf(output, "\n# Initialize globals\n");
+    fprintf(output, "    la $s7, globals_base\n");
+    fprintf(output, "    j main_start\n\n");
+    
+    fprintf(output, ".data\n");
+    fprintf(output, "globals_base:\n");
+    fprintf(output, "    .space 1024    # Reserve space for globals\n\n");
+    
+    fprintf(output, ".text\n");
+    fprintf(output, "main_start:\n");
 
     // Process all top-level declarations and functions
     ASTNode* current = root;
     while (current) {
         if (current->type == NODE_STMT_LIST) {
-            // Process the statement in this node
             genStmt(current->data.stmtlist.stmt);
-            // Move to next item in list
             current = current->data.stmtlist.next;
         } else {
-            // Single top-level item (not in a list)
             genStmt(current);
             break;
         }

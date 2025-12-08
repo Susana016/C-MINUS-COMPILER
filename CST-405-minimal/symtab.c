@@ -63,10 +63,33 @@ Symbol* addSymbol(const char* name, DataType type) {
     Symbol* sym = &symtab.currentScope->symbols[symtab.currentScope->count];
     sym->name = strdup(name);
     sym->type = type;
-    sym->offset = 0; // Will be set by caller
+    sym->offset = 0;
+    sym->isArray = 0;  // ADD THIS
     
     symtab.currentScope->count++;
     return sym;
+}
+
+int addVar(char* name, VarType type) {
+    if (strlen(name) > 0 && isInCurrentScope(name)) {
+        return -1;
+    }
+
+    Scope* scope = symtab.currentScope;
+    scope->symbols[scope->count].name = strdup(name);
+    scope->symbols[scope->count].type = type;
+    scope->symbols[scope->count].offset = scope->nextOffset;
+    scope->symbols[scope->count].isFunction = 0;
+    scope->symbols[scope->count].isArray = 0;  // ADD THIS
+
+    if (type == TYPE_DOUBLE) {
+        scope->nextOffset += 8;
+    } else {
+        scope->nextOffset += 4;
+    }
+
+    scope->count++;
+    return scope->symbols[scope->count - 1].offset;
 }
 
 Symbol* lookupSymbol(char* name) {
@@ -94,27 +117,6 @@ int isInCurrentScope(char* name) {
     return 0;
 }
 
-int addVar(char* name, VarType type) {
-    /* Check if already in CURRENT scope (skip check for unnamed/reserved variables) */
-    if (strlen(name) > 0 && isInCurrentScope(name)) {
-        return -1;  /* Duplicate in this scope */
-    }
-
-    Scope* scope = symtab.currentScope;
-    scope->symbols[scope->count].name = strdup(name);
-    scope->symbols[scope->count].type = type;
-    scope->symbols[scope->count].offset = scope->nextOffset;
-    scope->symbols[scope->count].isFunction = 0;
-
-    if (type == TYPE_DOUBLE) {
-        scope->nextOffset += 8;
-    } else {
-        scope->nextOffset += 4;
-    }
-
-    scope->count++;
-    return scope->symbols[scope->count - 1].offset;
-}
 
 int addFunction(char* name, char* returnType, char** paramTypes, int paramCount) {
     /* Functions go in global scope */

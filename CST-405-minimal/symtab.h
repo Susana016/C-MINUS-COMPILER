@@ -4,10 +4,12 @@
 typedef enum { TYPE_INT, TYPE_DOUBLE } VarType;
 typedef VarType DataType;  // Alias for compatibility
 
+// SINGLE Symbol struct with ALL fields
 typedef struct Symbol {
     char* name;
     VarType type;
     int offset;
+    int isArray;        // ADD THIS
     int isFunction;
     char* returnType;
     char** paramTypes;

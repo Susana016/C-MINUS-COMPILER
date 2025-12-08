@@ -30,9 +30,9 @@ if [ $? -eq 0 ]; then
    ./minicompiler comprehensive_test_class.c test.s
 
     echo ""
-    echo "Generated MIPS code saved to comprehensive.s"
-    echo "You can run it with: mars comprehensive.s"
-    echo "or: spim -file comprehensive.s"
+    echo "Generated MIPS code saved to test.s"
+    echo "You can run it with: mars test.s"
+    echo "or: spim -file test.s"
 else
     echo "✗ Build failed!"
     exit 1
