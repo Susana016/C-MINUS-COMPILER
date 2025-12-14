@@ -205,3 +205,11 @@ int getVariableCount() {
     return count;
 }
 
+/* Get the stack size needed for current scope */
+int getCurrentScopeSize() {
+    if (symtab.currentScope) {
+        return symtab.currentScope->nextOffset;
+    }
+    return 0;
+}
+

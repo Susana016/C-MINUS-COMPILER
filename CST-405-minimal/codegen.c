@@ -496,10 +496,10 @@ void genStmt(ASTNode* node) {
             // Create new scope for function
             pushScope();
             
-            // Prologue
-            fprintf(output, "    addi $sp, $sp, -408\n");
-            fprintf(output, "    sw $ra, 404($sp)\n");
-            fprintf(output, "    sw $fp, 400($sp)\n");
+            // Prologue - allocate large stack frame for local variables
+            fprintf(output, "    addi $sp, $sp, -2048\n");
+            fprintf(output, "    sw $ra, 2044($sp)\n");
+            fprintf(output, "    sw $fp, 2040($sp)\n");
             fprintf(output, "    move $fp, $sp\n");
             
             // Flatten parameter list
@@ -531,9 +531,9 @@ void genStmt(ASTNode* node) {
             popScope();
             
             // Epilogue
-            fprintf(output, "    lw $fp, 400($sp)\n");
-            fprintf(output, "    lw $ra, 404($sp)\n");
-            fprintf(output, "    addi $sp, $sp, 408\n");
+            fprintf(output, "    lw $fp, 2040($sp)\n");
+            fprintf(output, "    lw $ra, 2044($sp)\n");
+            fprintf(output, "    addi $sp, $sp, 2048\n");
             fprintf(output, "    jr $ra\n");
             break;
         }
@@ -543,9 +543,9 @@ void genStmt(ASTNode* node) {
                 genExpr(node->data.expr);
                 fprintf(output, "    move $v0, $t%d\n", getPrevTemp());
             }
-            fprintf(output, "    lw $fp, 400($sp)\n");
-            fprintf(output, "    lw $ra, 404($sp)\n");
-            fprintf(output, "    addi $sp, $sp, 408\n");
+            fprintf(output, "    lw $fp, 2040($sp)\n");
+            fprintf(output, "    lw $ra, 2044($sp)\n");
+            fprintf(output, "    addi $sp, $sp, 2048\n");
             fprintf(output, "    jr $ra\n");
             break;
         }

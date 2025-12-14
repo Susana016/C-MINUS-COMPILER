@@ -51,5 +51,6 @@ void popScope();
 /* Debug/statistics functions */
 void printSymbolTable(SymbolTable* table);
 int getVariableCount();
+int getCurrentScopeSize();
 
 #endif

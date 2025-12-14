@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "ast.h"
+#include "parser.tab.h"
 
 /* Create a number literal node */
 ASTNode* createNum(int value) {
@@ -412,11 +413,34 @@ void printAST(ASTNode* node, int level) {
         case NODE_VAR:
             printf("VAR: %s\n", node->data.name);
             break;
-        case NODE_BINOP:
-            printf("BINOP: %c\n", node->data.binop.op);
+        case NODE_BINOP: {
+            printf("BINOP: ");
+            // Handle multi-character operators
+            switch(node->data.binop.op) {
+                case EQ:  printf("==\n"); break;
+                case NEQ: printf("!=\n"); break;
+                case LE:  printf("<=\n"); break;
+                case GE:  printf(">=\n"); break;
+                case AND: printf("&&\n"); break;
+                case OR:  printf("||\n"); break;
+                case NOT: printf("!\n"); break;
+                default:  printf("%c\n", node->data.binop.op); break;
+            }
             printAST(node->data.binop.left, level + 1);
             printAST(node->data.binop.right, level + 1);
             break;
+        }
+        case NODE_UNARY_OP: {
+            printf("UNARY_OP: ");
+            // Handle unary operators
+            switch(node->data.unary_op.op) {
+                case '-': printf("-\n"); break;
+                case NOT: printf("!\n"); break;
+                default:  printf("%c\n", node->data.unary_op.op); break;
+            }
+            printAST(node->data.unary_op.operand, level + 1);
+            break;
+        }
         case NODE_DECL:
             printf("DECL (int): %s\n", node->data.name);
             break;
@@ -683,6 +707,9 @@ int countASTNodes(ASTNode* node) {
         case NODE_BINOP:
             count += countASTNodes(node->data.binop.left);
             count += countASTNodes(node->data.binop.right);
+            break;
+        case NODE_UNARY_OP:
+            count += countASTNodes(node->data.unary_op.operand);
             break;
         case NODE_ASSIGN:
             count += countASTNodes(node->data.assign.value);

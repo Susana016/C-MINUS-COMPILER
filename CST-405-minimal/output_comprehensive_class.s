@@ -19,9 +19,9 @@ main_start:
 
 # Function: testArithmetic returns int
 testArithmetic:
-    addi $sp, $sp, -408
-    sw $ra, 404($sp)
-    sw $fp, 400($sp)
+    addi $sp, $sp, -2048
+    sw $ra, 2044($sp)
+    sw $fp, 2040($sp)
     move $fp, $sp
     sw $a0, 8($sp)
     sw $a1, 12($sp)
@@ -99,20 +99,20 @@ testArithmetic:
     sw $t7, 28($sp)
     lw $t0, 28($sp)
     move $v0, $t0
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
 
 # Function: testRelational returns int
 testRelational:
-    addi $sp, $sp, -408
-    sw $ra, 404($sp)
-    sw $fp, 400($sp)
+    addi $sp, $sp, -2048
+    sw $ra, 2044($sp)
+    sw $fp, 2040($sp)
     move $fp, $sp
     sw $a0, 8($sp)
     sw $a1, 12($sp)
@@ -181,20 +181,20 @@ Lend_if_4:
 Lend_if_5:
     lw $t6, 0($sp)
     move $v0, $t6
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
 
 # Function: testIfElse returns int
 testIfElse:
-    addi $sp, $sp, -408
-    sw $ra, 404($sp)
-    sw $fp, 400($sp)
+    addi $sp, $sp, -2048
+    sw $ra, 2044($sp)
+    sw $fp, 2040($sp)
     move $fp, $sp
     sw $a0, 8($sp)
     # Declared int result at offset 4
@@ -254,20 +254,20 @@ Lend_if_10:
 Lend_if_8:
     lw $t6, 4($sp)
     move $v0, $t6
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
 
 # Function: testWhileLoop returns int
 testWhileLoop:
-    addi $sp, $sp, -408
-    sw $ra, 404($sp)
-    sw $fp, 400($sp)
+    addi $sp, $sp, -2048
+    sw $ra, 2044($sp)
+    sw $fp, 2040($sp)
     move $fp, $sp
     sw $a0, 8($sp)
     # Declared int sum at offset 8
@@ -294,20 +294,20 @@ Lwhile_0:
 Lend_while_0:
     lw $t6, 8($sp)
     move $v0, $t6
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
 
 # Function: testNestedLoops returns int
 testNestedLoops:
-    addi $sp, $sp, -408
-    sw $ra, 404($sp)
-    sw $fp, 400($sp)
+    addi $sp, $sp, -2048
+    sw $ra, 2044($sp)
+    sw $fp, 2040($sp)
     move $fp, $sp
     sw $a0, 8($sp)
     sw $a1, 12($sp)
@@ -350,20 +350,20 @@ Lend_while_2:
 Lend_while_1:
     lw $t1, 16($sp)
     move $v0, $t1
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
 
 # Function: testArrayOperations returns void
 testArrayOperations:
-    addi $sp, $sp, -408
-    sw $ra, 404($sp)
-    sw $fp, 400($sp)
+    addi $sp, $sp, -2048
+    sw $ra, 2044($sp)
+    sw $fp, 2040($sp)
     move $fp, $sp
     sw $a0, 8($sp)
     sw $a1, 12($sp)
@@ -421,16 +421,16 @@ Lwhile_4:
     sw $t2, 28($sp)
     j Lwhile_4
 Lend_while_4:
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
 
 # Function: sumArray returns int
 sumArray:
-    addi $sp, $sp, -408
-    sw $ra, 404($sp)
-    sw $fp, 400($sp)
+    addi $sp, $sp, -2048
+    sw $ra, 2044($sp)
+    sw $fp, 2040($sp)
     move $fp, $sp
     sw $a0, 8($sp)
     sw $a1, 12($sp)
@@ -462,20 +462,20 @@ Lwhile_5:
 Lend_while_5:
     lw $t7, 36($sp)
     move $v0, $t7
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
 
 # Function: factorial returns int
 factorial:
-    addi $sp, $sp, -408
-    sw $ra, 404($sp)
-    sw $fp, 400($sp)
+    addi $sp, $sp, -2048
+    sw $ra, 2044($sp)
+    sw $fp, 2040($sp)
     move $fp, $sp
     sw $a0, 8($sp)
     # Declared int result at offset 44
@@ -506,20 +506,20 @@ Lelse_11:
 Lend_if_11:
     lw $t4, 44($sp)
     move $v0, $t4
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
 
 # Function: fibonacci returns int
 fibonacci:
-    addi $sp, $sp, -408
-    sw $ra, 404($sp)
-    sw $fp, 400($sp)
+    addi $sp, $sp, -2048
+    sw $ra, 2044($sp)
+    sw $fp, 2040($sp)
     move $fp, $sp
     sw $a0, 8($sp)
     # Declared int result at offset 56
@@ -561,20 +561,20 @@ Lelse_12:
 Lend_if_12:
     lw $t6, 56($sp)
     move $v0, $t6
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
 
 # Function: power returns int
 power:
-    addi $sp, $sp, -408
-    sw $ra, 404($sp)
-    sw $fp, 400($sp)
+    addi $sp, $sp, -2048
+    sw $ra, 2044($sp)
+    sw $fp, 2040($sp)
     move $fp, $sp
     sw $a0, 8($sp)
     sw $a1, 12($sp)
@@ -608,20 +608,20 @@ Lelse_13:
 Lend_if_13:
     lw $t4, 76($sp)
     move $v0, $t4
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
 
 # Function: gcd returns int
 gcd:
-    addi $sp, $sp, -408
-    sw $ra, 404($sp)
-    sw $fp, 400($sp)
+    addi $sp, $sp, -2048
+    sw $ra, 2044($sp)
+    sw $fp, 2040($sp)
     move $fp, $sp
     sw $a0, 8($sp)
     sw $a1, 12($sp)
@@ -654,20 +654,20 @@ Lwhile_6:
 Lend_while_6:
     lw $t3, 8($sp)
     move $v0, $t3
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
 
 # Function: linearSearch returns int
 linearSearch:
-    addi $sp, $sp, -408
-    sw $ra, 404($sp)
-    sw $fp, 400($sp)
+    addi $sp, $sp, -2048
+    sw $ra, 2044($sp)
+    sw $fp, 2040($sp)
     move $fp, $sp
     sw $a0, 8($sp)
     sw $a1, 12($sp)
@@ -710,20 +710,20 @@ Lend_if_14:
 Lend_while_7:
     lw $t1, 104($sp)
     move $v0, $t1
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
 
 # Function: bubbleSort returns void
 bubbleSort:
-    addi $sp, $sp, -408
-    sw $ra, 404($sp)
-    sw $fp, 400($sp)
+    addi $sp, $sp, -2048
+    sw $ra, 2044($sp)
+    sw $fp, 2040($sp)
     move $fp, $sp
     sw $a0, 8($sp)
     sw $a1, 12($sp)
@@ -813,16 +813,16 @@ Lend_while_9:
     sw $t5, 108($sp)
     j Lwhile_8
 Lend_while_8:
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
 
 # Function: findMax returns int
 findMax:
-    addi $sp, $sp, -408
-    sw $ra, 404($sp)
-    sw $fp, 400($sp)
+    addi $sp, $sp, -2048
+    sw $ra, 2044($sp)
+    sw $fp, 2040($sp)
     move $fp, $sp
     sw $a0, 8($sp)
     sw $a1, 12($sp)
@@ -866,20 +866,20 @@ Lend_if_16:
 Lend_while_10:
     lw $t1, 132($sp)
     move $v0, $t1
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
 
 # Function: findMin returns int
 findMin:
-    addi $sp, $sp, -408
-    sw $ra, 404($sp)
-    sw $fp, 400($sp)
+    addi $sp, $sp, -2048
+    sw $ra, 2044($sp)
+    sw $fp, 2040($sp)
     move $fp, $sp
     sw $a0, 8($sp)
     sw $a1, 12($sp)
@@ -923,20 +923,20 @@ Lend_if_17:
 Lend_while_11:
     lw $t1, 140($sp)
     move $v0, $t1
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
 
 # Function: isPrime returns int
 isPrime:
-    addi $sp, $sp, -408
-    sw $ra, 404($sp)
-    sw $fp, 400($sp)
+    addi $sp, $sp, -2048
+    sw $ra, 2044($sp)
+    sw $fp, 2040($sp)
     move $fp, $sp
     sw $a0, 8($sp)
     # Declared int i at offset 148
@@ -991,20 +991,20 @@ Lend_while_12:
 Lend_if_18:
     lw $t6, 152($sp)
     move $v0, $t6
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
 
 # Function: countPrimes returns int
 countPrimes:
-    addi $sp, $sp, -408
-    sw $ra, 404($sp)
-    sw $fp, 400($sp)
+    addi $sp, $sp, -2048
+    sw $ra, 2044($sp)
+    sw $fp, 2040($sp)
     move $fp, $sp
     sw $a0, 8($sp)
     # Declared int count at offset 164
@@ -1043,20 +1043,20 @@ Lend_if_20:
 Lend_while_13:
     lw $t3, 164($sp)
     move $v0, $t3
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
 
 # Function: reverseArray returns void
 reverseArray:
-    addi $sp, $sp, -408
-    sw $ra, 404($sp)
-    sw $fp, 400($sp)
+    addi $sp, $sp, -2048
+    sw $ra, 2044($sp)
+    sw $fp, 2040($sp)
     move $fp, $sp
     sw $a0, 8($sp)
     sw $a1, 12($sp)
@@ -1107,16 +1107,16 @@ Lwhile_14:
     sw $t5, 180($sp)
     j Lwhile_14
 Lend_while_14:
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
 
 # Function: testComplexExpressions returns int
 testComplexExpressions:
-    addi $sp, $sp, -408
-    sw $ra, 404($sp)
-    sw $fp, 400($sp)
+    addi $sp, $sp, -2048
+    sw $ra, 2044($sp)
+    sw $fp, 2040($sp)
     move $fp, $sp
     sw $a0, 8($sp)
     sw $a1, 12($sp)
@@ -1197,20 +1197,20 @@ testComplexExpressions:
     sw $t0, 188($sp)
     lw $t1, 188($sp)
     move $v0, $t1
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
 
 # Function: testVoidFunction returns void
 testVoidFunction:
-    addi $sp, $sp, -408
-    sw $ra, 404($sp)
-    sw $fp, 400($sp)
+    addi $sp, $sp, -2048
+    sw $ra, 2044($sp)
+    sw $fp, 2040($sp)
     move $fp, $sp
     sw $a0, 8($sp)
     # Declared int y at offset 212
@@ -1227,16 +1227,16 @@ testVoidFunction:
     li $v0, 11
     li $a0, 10
     syscall
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
 
 # Function: printArray returns void
 printArray:
-    addi $sp, $sp, -408
-    sw $ra, 404($sp)
-    sw $fp, 400($sp)
+    addi $sp, $sp, -2048
+    sw $ra, 2044($sp)
+    sw $fp, 2040($sp)
     move $fp, $sp
     sw $a0, 8($sp)
     sw $a1, 12($sp)
@@ -1268,16 +1268,16 @@ Lwhile_15:
     sw $t2, 216($sp)
     j Lwhile_15
 Lend_while_15:
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
 
 # Function: multiply3 returns int
 multiply3:
-    addi $sp, $sp, -408
-    sw $ra, 404($sp)
-    sw $fp, 400($sp)
+    addi $sp, $sp, -2048
+    sw $ra, 2044($sp)
+    sw $fp, 2040($sp)
     move $fp, $sp
     sw $a0, 8($sp)
     sw $a1, 12($sp)
@@ -1294,20 +1294,20 @@ multiply3:
     sw $t0, 224($sp)
     lw $t1, 224($sp)
     move $v0, $t1
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
 
 # Function: add4 returns int
 add4:
-    addi $sp, $sp, -408
-    sw $ra, 404($sp)
-    sw $fp, 400($sp)
+    addi $sp, $sp, -2048
+    sw $ra, 2044($sp)
+    sw $fp, 2040($sp)
     move $fp, $sp
     sw $a0, 8($sp)
     sw $a1, 12($sp)
@@ -1330,20 +1330,20 @@ add4:
     sw $t2, 236($sp)
     lw $t3, 236($sp)
     move $v0, $t3
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
 
 # Function: max3 returns int
 max3:
-    addi $sp, $sp, -408
-    sw $ra, 404($sp)
-    sw $fp, 400($sp)
+    addi $sp, $sp, -2048
+    sw $ra, 2044($sp)
+    sw $fp, 2040($sp)
     move $fp, $sp
     sw $a0, 8($sp)
     sw $a1, 12($sp)
@@ -1369,20 +1369,20 @@ Lend_if_21:
 Lend_if_22:
     lw $t5, 240($sp)
     move $v0, $t5
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
 
 # Function: fillArray returns void
 fillArray:
-    addi $sp, $sp, -408
-    sw $ra, 404($sp)
-    sw $fp, 400($sp)
+    addi $sp, $sp, -2048
+    sw $ra, 2044($sp)
+    sw $fp, 2040($sp)
     move $fp, $sp
     sw $a0, 8($sp)
     sw $a1, 12($sp)
@@ -1408,16 +1408,16 @@ Lwhile_16:
     sw $t2, 244($sp)
     j Lwhile_16
 Lend_while_16:
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
 
 # Function: copyArray returns void
 copyArray:
-    addi $sp, $sp, -408
-    sw $ra, 404($sp)
-    sw $fp, 400($sp)
+    addi $sp, $sp, -2048
+    sw $ra, 2044($sp)
+    sw $fp, 2040($sp)
     move $fp, $sp
     sw $a0, 8($sp)
     sw $a1, 12($sp)
@@ -1447,16 +1447,16 @@ Lwhile_17:
     sw $t2, 248($sp)
     j Lwhile_17
 Lend_while_17:
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
 
 # Function: arrayEqual returns int
 arrayEqual:
-    addi $sp, $sp, -408
-    sw $ra, 404($sp)
-    sw $fp, 400($sp)
+    addi $sp, $sp, -2048
+    sw $ra, 2044($sp)
+    sw $fp, 2040($sp)
     move $fp, $sp
     sw $a0, 8($sp)
     sw $a1, 12($sp)
@@ -1501,20 +1501,20 @@ Lend_if_23:
 Lend_while_18:
     lw $t2, 256($sp)
     move $v0, $t2
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
 
 # Function: absoluteValue returns int
 absoluteValue:
-    addi $sp, $sp, -408
-    sw $ra, 404($sp)
-    sw $fp, 400($sp)
+    addi $sp, $sp, -2048
+    sw $ra, 2044($sp)
+    sw $fp, 2040($sp)
     move $fp, $sp
     sw $a0, 8($sp)
     # Declared int result at offset 260
@@ -1537,20 +1537,20 @@ Lelse_24:
 Lend_if_24:
     lw $t3, 260($sp)
     move $v0, $t3
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
 
 # Function: sign returns int
 sign:
-    addi $sp, $sp, -408
-    sw $ra, 404($sp)
-    sw $fp, 400($sp)
+    addi $sp, $sp, -2048
+    sw $ra, 2044($sp)
+    sw $fp, 2040($sp)
     move $fp, $sp
     sw $a0, 8($sp)
     # Declared int result at offset 268
@@ -1580,20 +1580,20 @@ Lend_if_26:
 Lend_if_25:
     lw $t6, 268($sp)
     move $v0, $t6
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
 
 # Function: sumOfSquares returns int
 sumOfSquares:
-    addi $sp, $sp, -408
-    sw $ra, 404($sp)
-    sw $fp, 400($sp)
+    addi $sp, $sp, -2048
+    sw $ra, 2044($sp)
+    sw $fp, 2040($sp)
     move $fp, $sp
     sw $a0, 8($sp)
     # Declared int sum at offset 272
@@ -1625,20 +1625,20 @@ Lwhile_19:
 Lend_while_19:
     lw $t1, 272($sp)
     move $v0, $t1
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
 
 # Function: sumOfCubes returns int
 sumOfCubes:
-    addi $sp, $sp, -408
-    sw $ra, 404($sp)
-    sw $fp, 400($sp)
+    addi $sp, $sp, -2048
+    sw $ra, 2044($sp)
+    sw $fp, 2040($sp)
     move $fp, $sp
     sw $a0, 8($sp)
     # Declared int sum at offset 284
@@ -1675,20 +1675,20 @@ Lwhile_20:
 Lend_while_20:
     lw $t4, 284($sp)
     move $v0, $t4
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
 
 # Function: calculateMean returns int
 calculateMean:
-    addi $sp, $sp, -408
-    sw $ra, 404($sp)
-    sw $fp, 400($sp)
+    addi $sp, $sp, -2048
+    sw $ra, 2044($sp)
+    sw $fp, 2040($sp)
     move $fp, $sp
     sw $a0, 8($sp)
     sw $a1, 12($sp)
@@ -1722,20 +1722,20 @@ Lend_while_21:
     lw $t0, 12($sp)
     div $t1, $t7, $t0
     move $v0, $t1
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
 
 # Function: countOccurrences returns int
 countOccurrences:
-    addi $sp, $sp, -408
-    sw $ra, 404($sp)
-    sw $fp, 400($sp)
+    addi $sp, $sp, -2048
+    sw $ra, 2044($sp)
+    sw $fp, 2040($sp)
     move $fp, $sp
     sw $a0, 8($sp)
     sw $a1, 12($sp)
@@ -1774,20 +1774,20 @@ Lend_if_27:
 Lend_while_22:
     lw $t2, 308($sp)
     move $v0, $t2
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
 
 # Function: leftShift returns int
 leftShift:
-    addi $sp, $sp, -408
-    sw $ra, 404($sp)
-    sw $fp, 400($sp)
+    addi $sp, $sp, -2048
+    sw $ra, 2044($sp)
+    sw $fp, 2040($sp)
     move $fp, $sp
     sw $a0, 8($sp)
     sw $a1, 12($sp)
@@ -1815,20 +1815,20 @@ Lwhile_23:
 Lend_while_23:
     lw $t6, 316($sp)
     move $v0, $t6
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
 
 # Function: rightShift returns int
 rightShift:
-    addi $sp, $sp, -408
-    sw $ra, 404($sp)
-    sw $fp, 400($sp)
+    addi $sp, $sp, -2048
+    sw $ra, 2044($sp)
+    sw $fp, 2040($sp)
     move $fp, $sp
     sw $a0, 8($sp)
     sw $a1, 12($sp)
@@ -1856,20 +1856,20 @@ Lwhile_24:
 Lend_while_24:
     lw $t6, 324($sp)
     move $v0, $t6
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
 
 # Function: arrayLength returns int
 arrayLength:
-    addi $sp, $sp, -408
-    sw $ra, 404($sp)
-    sw $fp, 400($sp)
+    addi $sp, $sp, -2048
+    sw $ra, 2044($sp)
+    sw $fp, 2040($sp)
     move $fp, $sp
     sw $a0, 8($sp)
     sw $a1, 12($sp)
@@ -1904,20 +1904,20 @@ Lend_if_28:
 Lend_while_25:
     lw $t0, 332($sp)
     move $v0, $t0
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
 
 # Function: main returns void
 main:
-    addi $sp, $sp, -408
-    sw $ra, 404($sp)
-    sw $fp, 400($sp)
+    addi $sp, $sp, -2048
+    sw $ra, 2044($sp)
+    sw $fp, 2040($sp)
     move $fp, $sp
     # Declared array testArray[10] at offset 336
     # Declared array testArray2[10] at offset 376
@@ -2868,7 +2868,7 @@ Lend_while_28:
     li $v0, 11
     li $a0, 10
     syscall
-    lw $fp, 400($sp)
-    lw $ra, 404($sp)
-    addi $sp, $sp, 408
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
     jr $ra
