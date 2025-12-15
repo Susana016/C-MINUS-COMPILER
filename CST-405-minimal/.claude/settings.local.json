@@ -25,7 +25,10 @@
       "Bash(git pull:*)",
       "Bash(git check-ignore:*)",
       "Bash(python:*)",
-      "Bash(/dev/null)"
+      "Bash(/dev/null)",
+      "Bash(brew search:*)",
+      "Bash(brew install:*)",
+      "Bash(spim:*)"
     ],
     "deny": [],
     "ask": []
