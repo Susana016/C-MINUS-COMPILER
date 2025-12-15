@@ -40,6 +40,7 @@ void exitScope() {
 void pushScope() {
     Scope* newScope = malloc(sizeof(Scope));
     newScope->count = 0;
+    newScope->nextOffset = 0;  // Initialize nextOffset
     newScope->parent = symtab.currentScope;
     symtab.currentScope = newScope;
 }
@@ -49,6 +50,12 @@ void popScope() {
         Scope* oldScope = symtab.currentScope;
         symtab.currentScope = oldScope->parent;
         free(oldScope);
+    }
+}
+
+void setNextOffset(int offset) {
+    if (symtab.currentScope) {
+        symtab.currentScope->nextOffset = offset;
     }
 }
 
@@ -64,7 +71,9 @@ Symbol* addSymbol(const char* name, DataType type) {
     sym->name = strdup(name);
     sym->type = type;
     sym->offset = 0;
-    sym->isArray = 0;  // ADD THIS
+    sym->isArray = 0;
+    sym->isParameter = 0;
+    sym->isGlobal = (symtab.currentScope == symtab.globalScope);
     
     symtab.currentScope->count++;
     return sym;
@@ -80,7 +89,9 @@ int addVar(char* name, VarType type) {
     scope->symbols[scope->count].type = type;
     scope->symbols[scope->count].offset = scope->nextOffset;
     scope->symbols[scope->count].isFunction = 0;
-    scope->symbols[scope->count].isArray = 0;  // ADD THIS
+    scope->symbols[scope->count].isArray = 0;
+    scope->symbols[scope->count].isParameter = 0;
+    scope->symbols[scope->count].isGlobal = (scope == symtab.globalScope);
 
     if (type == TYPE_DOUBLE) {
         scope->nextOffset += 8;

@@ -23,6 +23,9 @@ int getPrevTemp() {
     return prev;
 }
 
+// Forward declaration for flattenArgList (defined after genExpr)
+static void flattenArgList(ASTNode* node, ASTNode** argArray, int* count, int maxArgs);
+
 void genExpr(ASTNode* node) {
     if (!node) return;
     
@@ -145,10 +148,25 @@ void genExpr(ASTNode* node) {
             int indexReg = getPrevTemp();
             
             resultReg = getNextTemp();
-            fprintf(output, "    # Array access: arr[index]\n");
+            fprintf(output, "    # Array access: %s[index]\n", node->data.array_access.name);
+            
+            // Convert index to byte offset (multiply by 4 for int)
             fprintf(output, "    sll $t%d, $t%d, 2\n", indexReg, indexReg);
-            fprintf(output, "    add $t%d, $t%d, $sp\n", indexReg, indexReg);
-            fprintf(output, "    lw $t%d, %d($t%d)\n", resultReg, sym->offset, indexReg);
+            
+            if (sym->isGlobal) {
+                // Global array: use $s7 (globals_base) as base
+                fprintf(output, "    add $t%d, $t%d, $s7\n", indexReg, indexReg);
+                fprintf(output, "    lw $t%d, %d($t%d)\n", resultReg, sym->offset, indexReg);
+            } else if (sym->isParameter) {
+                // Parameter array: it's a pointer, so load the pointer first
+                fprintf(output, "    lw $t%d, %d($sp)\n", resultReg, sym->offset);
+                fprintf(output, "    add $t%d, $t%d, $t%d\n", indexReg, indexReg, resultReg);
+                fprintf(output, "    lw $t%d, 0($t%d)\n", resultReg, indexReg);
+            } else {
+                // Local array: use $sp as base
+                fprintf(output, "    add $t%d, $t%d, $sp\n", indexReg, indexReg);
+                fprintf(output, "    lw $t%d, %d($t%d)\n", resultReg, sym->offset, indexReg);
+            }
             break;
         }
         
@@ -163,25 +181,51 @@ void genExpr(ASTNode* node) {
                 break;
             }
             
-            // Regular function call as expression
-            ASTNode* arg = node->data.call_expr.args;
-            int argNum = 0;
+            // Save all $t registers before function call (caller-save convention)
+            // Use a reserved area of the stack for temp registers
+            fprintf(output, "    # Save caller-saved temp registers before call\n");
+            for (int i = 0; i < 8; i++) {
+                fprintf(output, "    sw $t%d, %d($sp)\n", i, 2000 + i * 4);
+            }
             
-            while (arg && argNum < 4) {
-                if (arg->type == NODE_ARG_LIST) {
-                    genExpr(arg->data.arg_list.arg);
-                    fprintf(output, "    move $a%d, $t%d\n", argNum, getPrevTemp());
-                    argNum++;
-                    arg = arg->data.arg_list.next;
-                } else {
-                    genExpr(arg);
-                    fprintf(output, "    move $a%d, $t%d\n", argNum, getPrevTemp());
-                    argNum++;
-                    break;
+            // Flatten the argument list into an array
+            ASTNode* argArray[4];
+            int argCount = 0;
+            flattenArgList(node->data.call_expr.args, argArray, &argCount, 4);
+            
+            // Process each argument in order
+            for (int i = 0; i < argCount; i++) {
+                ASTNode* currentArg = argArray[i];
+                
+                // Check if this argument is an array variable
+                if (currentArg && currentArg->type == NODE_VAR) {
+                    Symbol* sym = lookupSymbol(currentArg->data.name);
+                    if (sym && sym->isArray) {
+                        if (sym->isGlobal) {
+                            fprintf(output, "    # Pass global array address: %s\n", currentArg->data.name);
+                            fprintf(output, "    la $a%d, globals_base\n", i);
+                            fprintf(output, "    addi $a%d, $a%d, %d\n", i, i, sym->offset);
+                        } else {
+                            fprintf(output, "    # Pass local array address: %s\n", currentArg->data.name);
+                            fprintf(output, "    addi $a%d, $sp, %d\n", i, sym->offset);
+                        }
+                        continue;
+                    }
                 }
+                
+                // Regular argument - evaluate and pass value
+                genExpr(currentArg);
+                fprintf(output, "    move $a%d, $t%d\n", i, getPrevTemp());
             }
             
             fprintf(output, "    jal %s\n", node->data.call_expr.funcName);
+            
+            // Restore temp registers after call
+            fprintf(output, "    # Restore caller-saved temp registers after call\n");
+            for (int i = 0; i < 8; i++) {
+                fprintf(output, "    lw $t%d, %d($sp)\n", i, 2000 + i * 4);
+            }
+            
             resultReg = getNextTemp();
             fprintf(output, "    move $t%d, $v0\n", resultReg);
             break;
@@ -198,6 +242,24 @@ static void flattenParamList(ASTNode* node, ASTNode** paramArray, int* count, in
         flattenParamList(node->data.stmtlist.next, paramArray, count, maxParams);
     } else if (node->type == NODE_PARAMETER) {
         paramArray[(*count)++] = node;
+    }
+}
+
+// Helper function to flatten argument list (left-recursive from parser)
+// For add3(10, 20, 30), the structure is:
+//   arg_list { arg: arg_list { arg: 10, next: 20 }, next: 30 }
+// We need to collect: [10, 20, 30]
+static void flattenArgList(ASTNode* node, ASTNode** argArray, int* count, int maxArgs) {
+    if (!node || *count >= maxArgs) return;
+    
+    if (node->type == NODE_ARG_LIST) {
+        // First recurse into the 'arg' which may be another arg_list or an expression
+        flattenArgList(node->data.arg_list.arg, argArray, count, maxArgs);
+        // Then add the 'next' which is always an expression
+        flattenArgList(node->data.arg_list.next, argArray, count, maxArgs);
+    } else {
+        // This is an expression (not arg_list), add it to the array
+        argArray[(*count)++] = node;
     }
 }
 
@@ -364,12 +426,11 @@ void genStmt(ASTNode* node) {
             fprintf(output, "    # Declared array %s[%d] at offset %d\n", 
                     node->data.array_decl.name, size, offset);
             
-            // Mark as array
-            Symbol* sym = lookupSymbol(node->data.array_decl.name);
-            if (sym) {
-                sym->isArray = 1;  // ADD THIS!
-            }
+            // Mark as array - get the symbol we just added (it's at count-1)
+            Scope* scope = symtab.currentScope;
+            scope->symbols[scope->count - 1].isArray = 1;
             
+            // Allocate space for remaining elements (first element already allocated by addVar)
             for (int i = 1; i < size; i++) {
                 addVar("", TYPE_INT);
             }
@@ -383,7 +444,6 @@ void genStmt(ASTNode* node) {
                 fprintf(stderr, "Error: Array %s not declared\n", node->data.array_assign.name);
                 exit(1);
             }
-            int offset = arrSym->offset;
 
             // Evaluate value first
             genExpr(node->data.array_assign.value);
@@ -393,26 +453,25 @@ void genStmt(ASTNode* node) {
             genExpr(node->data.array_assign.index);
             int indexReg = getPrevTemp();
 
-            // Check if array is global
-            int isGlobal = 0;
-            if (symtab.globalScope) {
-                for (int i = 0; i < symtab.globalScope->count; i++) {
-                    if (&symtab.globalScope->symbols[i] == arrSym) {
-                        isGlobal = 1;
-                        break;
-                    }
-                }
-            }
-
             // Calculate address and store
-            fprintf(output, "    # Array assignment: arr[index] = value\n");
+            fprintf(output, "    # Array assignment: %s[index] = value\n", node->data.array_assign.name);
             fprintf(output, "    sll $t%d, $t%d, 2\n", indexReg, indexReg);
-            if (isGlobal) {
+            
+            if (arrSym->isGlobal) {
+                // Global array: use $s7 (globals_base) as base
                 fprintf(output, "    add $t%d, $t%d, $s7\n", indexReg, indexReg);
+                fprintf(output, "    sw $t%d, %d($t%d)\n", valueReg, arrSym->offset, indexReg);
+            } else if (arrSym->isParameter) {
+                // Parameter array: it's a pointer, so load the pointer first
+                int ptrReg = getNextTemp();
+                fprintf(output, "    lw $t%d, %d($sp)\n", ptrReg, arrSym->offset);
+                fprintf(output, "    add $t%d, $t%d, $t%d\n", indexReg, indexReg, ptrReg);
+                fprintf(output, "    sw $t%d, 0($t%d)\n", valueReg, indexReg);
             } else {
+                // Local array: use $sp as base
                 fprintf(output, "    add $t%d, $t%d, $sp\n", indexReg, indexReg);
+                fprintf(output, "    sw $t%d, %d($t%d)\n", valueReg, arrSym->offset, indexReg);
             }
-            fprintf(output, "    sw $t%d, %d($t%d)\n", valueReg, offset, indexReg);
             tempReg = 0;
             break;
         }
@@ -517,10 +576,20 @@ void genStmt(ASTNode* node) {
                 Symbol* paramSym = addSymbol(paramArray[i]->data.parameter.name, TYPE_INT);
                 if (paramSym) {
                     paramSym->offset = paramOffset;
+                    paramSym->isParameter = 1;  // Mark as parameter
+                    // Check if this is an array parameter (type ends with [])
+                    const char* paramType = paramArray[i]->data.parameter.type;
+                    if (paramType && strstr(paramType, "[") != NULL) {
+                        paramSym->isArray = 1;  // Mark as array parameter
+                    }
                 }
                 
                 paramOffset += 4;
             }
+            
+            // Set the next offset for local variables to be AFTER all parameters
+            // This prevents local variables from overwriting parameter values
+            setNextOffset(paramOffset);
             
             // Generate function body
             if (node->data.function.body) {
@@ -587,35 +656,34 @@ void genStmt(ASTNode* node) {
             }
             
             /* Regular function call - load arguments into $a0-$a3 */
-            ASTNode* arg = node->data.call.args;
-            int argNum = 0;
-
-            while (arg && argNum < 4) {
-                ASTNode* currentArg = NULL;
-                
-                if (arg->type == NODE_ARG_LIST) {
-                    currentArg = arg->data.arg_list.arg;
-                    arg = arg->data.arg_list.next;
-                } else {
-                    currentArg = arg;
-                    arg = NULL;
-                }
+            // Flatten the argument list into an array
+            ASTNode* argArray[4];
+            int argCount = 0;
+            flattenArgList(node->data.call.args, argArray, &argCount, 4);
+            
+            // Process each argument in order
+            for (int i = 0; i < argCount; i++) {
+                ASTNode* currentArg = argArray[i];
                 
                 // Check if this argument is an array
                 if (currentArg && currentArg->type == NODE_VAR) {
                     Symbol* sym = lookupSymbol(currentArg->data.name);
-                    if (sym && sym->isArray) {  // CHECK isArray!
-                        fprintf(output, "    # Pass array address: %s\n", currentArg->data.name);
-                        fprintf(output, "    addi $a%d, $sp, %d\n", argNum, sym->offset);
-                        argNum++;
+                    if (sym && sym->isArray) {
+                        if (sym->isGlobal) {
+                            fprintf(output, "    # Pass global array address: %s\n", currentArg->data.name);
+                            fprintf(output, "    la $a%d, globals_base\n", i);
+                            fprintf(output, "    addi $a%d, $a%d, %d\n", i, i, sym->offset);
+                        } else {
+                            fprintf(output, "    # Pass local array address: %s\n", currentArg->data.name);
+                            fprintf(output, "    addi $a%d, $sp, %d\n", i, sym->offset);
+                        }
                         continue;
                     }
                 }
                 
                 // Regular argument - evaluate and pass value
                 genExpr(currentArg);
-                fprintf(output, "    move $a%d, $t%d\n", argNum, getPrevTemp());
-                argNum++;
+                fprintf(output, "    move $a%d, $t%d\n", i, getPrevTemp());
             }
 
             /* Call function */

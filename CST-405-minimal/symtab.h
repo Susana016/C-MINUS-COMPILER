@@ -9,7 +9,9 @@ typedef struct Symbol {
     char* name;
     VarType type;
     int offset;
-    int isArray;        // ADD THIS
+    int isArray;        // Is this an array?
+    int isParameter;    // Is this a function parameter?
+    int isGlobal;       // Is this a global variable?
     int isFunction;
     char* returnType;
     char** paramTypes;
@@ -47,6 +49,7 @@ void enterScope();
 void exitScope();
 void pushScope();
 void popScope();
+void setNextOffset(int offset);  /* Set the next available offset for local variables */
 
 /* Debug/statistics functions */
 void printSymbolTable(SymbolTable* table);
