@@ -1730,6 +1730,99 @@ multiply3:
     addi $sp, $sp, 2048
     jr $ra
 
+# Function: testComplexExpressions returns int
+testComplexExpressions:
+    addi $sp, $sp, -2048
+    sw $ra, 2044($sp)
+    sw $fp, 2040($sp)
+    move $fp, $sp
+    sw $a0, 8($sp)
+    sw $a1, 12($sp)
+    sw $a2, 16($sp)
+    # Declared int result at offset 20
+    # Declared int temp1 at offset 24
+    # Declared int temp2 at offset 28
+    # Declared int temp3 at offset 32
+    # Declared int temp4 at offset 36
+    lw $t5, 12($sp)
+    lw $t6, 16($sp)
+    mul $t7, $t5, $t6
+    sw $t7, 24($sp)
+    lw $t0, 8($sp)
+    lw $t1, 12($sp)
+    div $t2, $t0, $t1
+    sw $t2, 28($sp)
+    lw $t3, 8($sp)
+    lw $t4, 24($sp)
+    add $t5, $t3, $t4
+    sw $t5, 32($sp)
+    lw $t6, 32($sp)
+    lw $t7, 28($sp)
+    sub $t0, $t6, $t7
+    sw $t0, 20($sp)
+    lw $t1, 8($sp)
+    lw $t2, 12($sp)
+    add $t3, $t1, $t2
+    sw $t3, 24($sp)
+    lw $t4, 16($sp)
+    lw $t5, 8($sp)
+    sub $t6, $t4, $t5
+    sw $t6, 28($sp)
+    lw $t7, 24($sp)
+    lw $t0, 28($sp)
+    mul $t1, $t7, $t0
+    sw $t1, 32($sp)
+    lw $t2, 12($sp)
+    li $t3, 1
+    add $t4, $t2, $t3
+    sw $t4, 36($sp)
+    lw $t5, 32($sp)
+    lw $t6, 36($sp)
+    div $t7, $t5, $t6
+    sw $t7, 20($sp)
+    lw $t0, 8($sp)
+    lw $t1, 12($sp)
+    mul $t2, $t0, $t1
+    sw $t2, 24($sp)
+    lw $t3, 16($sp)
+    lw $t4, 8($sp)
+    mul $t5, $t3, $t4
+    sw $t5, 28($sp)
+    lw $t6, 12($sp)
+    lw $t7, 16($sp)
+    div $t0, $t6, $t7
+    sw $t0, 32($sp)
+    lw $t1, 24($sp)
+    lw $t2, 28($sp)
+    add $t3, $t1, $t2
+    sw $t3, 36($sp)
+    lw $t4, 36($sp)
+    lw $t5, 32($sp)
+    sub $t6, $t4, $t5
+    sw $t6, 36($sp)
+    lw $t7, 36($sp)
+    lw $t0, 8($sp)
+    add $t1, $t7, $t0
+    sw $t1, 36($sp)
+    lw $t2, 36($sp)
+    lw $t3, 12($sp)
+    sub $t4, $t2, $t3
+    sw $t4, 36($sp)
+    lw $t5, 36($sp)
+    lw $t6, 16($sp)
+    add $t7, $t5, $t6
+    sw $t7, 20($sp)
+    lw $t0, 20($sp)
+    move $v0, $t0
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
+    jr $ra
+    lw $fp, 2040($sp)
+    lw $ra, 2044($sp)
+    addi $sp, $sp, 2048
+    jr $ra
+
 # Function: add4 returns int
 add4:
     addi $sp, $sp, -2048
@@ -1743,20 +1836,20 @@ add4:
     # Declared int temp1 at offset 24
     # Declared int temp2 at offset 28
     # Declared int result at offset 32
-    lw $t5, 8($sp)
-    lw $t6, 12($sp)
-    add $t7, $t5, $t6
-    sw $t7, 24($sp)
-    lw $t0, 16($sp)
-    lw $t1, 20($sp)
-    add $t2, $t0, $t1
-    sw $t2, 28($sp)
-    lw $t3, 24($sp)
-    lw $t4, 28($sp)
-    add $t5, $t3, $t4
-    sw $t5, 32($sp)
-    lw $t6, 32($sp)
-    move $v0, $t6
+    lw $t1, 8($sp)
+    lw $t2, 12($sp)
+    add $t3, $t1, $t2
+    sw $t3, 24($sp)
+    lw $t4, 16($sp)
+    lw $t5, 20($sp)
+    add $t6, $t4, $t5
+    sw $t6, 28($sp)
+    lw $t7, 24($sp)
+    lw $t0, 28($sp)
+    add $t1, $t7, $t0
+    sw $t1, 32($sp)
+    lw $t2, 32($sp)
+    move $v0, $t2
     lw $fp, 2040($sp)
     lw $ra, 2044($sp)
     addi $sp, $sp, 2048
@@ -1773,9 +1866,9 @@ printValue:
     sw $fp, 2040($sp)
     move $fp, $sp
     sw $a0, 8($sp)
-    lw $t7, 8($sp)
+    lw $t3, 8($sp)
     # Print integer
-    move $a0, $t7
+    move $a0, $t3
     li $v0, 1
     syscall
     # Print newline
@@ -3554,6 +3647,51 @@ main:
     li $v0, 11
     li $a0, 10
     syscall
+    # Save caller-saved temp registers before call
+    sw $t0, 2000($sp)
+    sw $t1, 2004($sp)
+    sw $t2, 2008($sp)
+    sw $t3, 2012($sp)
+    sw $t4, 2016($sp)
+    sw $t5, 2020($sp)
+    sw $t6, 2024($sp)
+    sw $t7, 2028($sp)
+    li $t0, 10
+    move $a0, $t0
+    li $t1, 5
+    move $a1, $t1
+    li $t2, 3
+    move $a2, $t2
+    jal testComplexExpressions
+    # Restore caller-saved temp registers after call
+    lw $t0, 2000($sp)
+    lw $t1, 2004($sp)
+    lw $t2, 2008($sp)
+    lw $t3, 2012($sp)
+    lw $t4, 2016($sp)
+    lw $t5, 2020($sp)
+    lw $t6, 2024($sp)
+    lw $t7, 2028($sp)
+    move $t3, $v0
+    sw $t3, 8($sp)
+    lw $t4, 8($sp)
+    # Print integer
+    move $a0, $t4
+    li $v0, 1
+    syscall
+    # Print newline
+    li $v0, 11
+    li $a0, 10
+    syscall
+    li $t0, 35
+    # Print integer
+    move $a0, $t0
+    li $v0, 1
+    syscall
+    # Print newline
+    li $v0, 11
+    li $a0, 10
+    syscall
     li $t0, 100
     sw $t0, 0($sp)
     li $t1, 200
@@ -3571,7 +3709,7 @@ main:
     li $v0, 11
     li $a0, 10
     syscall
-    li $t0, 35
+    li $t0, 36
     # Print integer
     move $a0, $t0
     li $v0, 1

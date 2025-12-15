@@ -622,6 +622,47 @@ int multiply3(int a, int b, int c) {
 }
 
 /* ========================================
+   COMPLEX EXPRESSION TESTING
+   ======================================== */
+int testComplexExpressions(int a, int b, int c) {
+    int result;
+    int temp1;
+    int temp2;
+    int temp3;
+    int temp4;
+
+    /* Multiple operations with precedence */
+    /* a + (b * c) - (a / b) = 10 + (5 * 3) - (10 / 5) = 10 + 15 - 2 = 23 */
+    temp1 = b * c;
+    temp2 = a / b;
+    temp3 = a + temp1;
+    result = temp3 - temp2;
+
+    /* Nested parentheses */
+    /* ((a + b) * (c - a)) / (b + 1) = ((10 + 5) * (3 - 10)) / (5 + 1) = (15 * -7) / 6 = -105 / 6 = -17 */
+    temp1 = a + b;
+    temp2 = c - a;
+    temp3 = temp1 * temp2;
+    temp4 = b + 1;
+    result = temp3 / temp4;
+
+    /* Long expression */
+    /* (a * b) + (c * a) - (b / c) + a - b + c */
+    /* = (10 * 5) + (3 * 10) - (5 / 3) + 10 - 5 + 3 */
+    /* = 50 + 30 - 1 + 10 - 5 + 3 = 87 */
+    temp1 = a * b;
+    temp2 = c * a;
+    temp3 = b / c;
+    temp4 = temp1 + temp2;
+    temp4 = temp4 - temp3;
+    temp4 = temp4 + a;
+    temp4 = temp4 - b;
+    result = temp4 + c;
+
+    return result;
+}
+
+/* ========================================
    MULTIPLE PARAMETERS (4)
    ======================================== */
 int add4(int a, int b, int c, int d) {
@@ -858,15 +899,20 @@ void main(void) {
     result = add4(1, 2, 3, 4);
     print(result);
     
-    /* Test 34: Global Variables */
+    /* Test 34: Complex Expressions (10, 5, 3) => 87 */
     print(34);
+    result = testComplexExpressions(10, 5, 3);
+    print(result);
+    
+    /* Test 35: Global Variables */
+    print(35);
     globalX = 100;
     globalY = 200;
     result = globalX + globalY;
     print(result);
     
-    /* Test 35: Void Function */
-    print(35);
+    /* Test 36: Void Function */
+    print(36);
     printValue(999);
     
     /* All tests complete */
