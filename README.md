@@ -289,9 +289,17 @@ Individual test programs:
 - MIPS assembly language reference
 - C-Minus language specification
 
-## Author
+## Contributors
 
-Created for CST-405 Compiler Design Course
+This project was collaboratively developed for CST-405 Compiler Design.
+
+### Susana Hernandez — Contributions
+- Lexer and parser implementation (Flex/Bison)
+- AST construction and traversal
+- Symbol table design with hierarchical scope management
+- Three-address code (TAC) generation
+- MIPS assembly code generation and register allocation
+- Debugging across all phases: array support, 2D arrays, function declarations, nested control flow
 
 ## License
 
